@@ -3178,8 +3178,8 @@ HWND WINAPI explorerframe_SHCreateWorkerWindowHook(
     if (dwExStyle == 0x10000 && dwStyle == 0x46000000)
     {
 #ifdef USE_PRIVATE_INTERFACES
-        //if (result) // bMicaEffectOnTitlebar && result
-        //{
+        if (result) // bMicaEffectOnTitlebar && result
+        {
             BOOL value = TRUE;
             SetPropW(hWndParent, L"NavBarGlass", HANDLE_FLAG_INHERIT);
 
@@ -3193,7 +3193,7 @@ HWND WINAPI explorerframe_SHCreateWorkerWindowHook(
                 printf("DwmSetWindowAttribute() failure: %d\n", hr);
             }
            if (result) SetWindowSubclass(result, ExplorerMicaTitlebarSubclassProc, ExplorerMicaTitlebarSubclassProc, 0);
-        //}
+        }
 #endif
 
         if (bHideExplorerSearchBar && result)
@@ -6363,7 +6363,7 @@ HWND CreateWindowExWHook(
         }
     }
     */
-    //SetWindowTheme(hWnd, L" ", L" ");
+   
     return hWnd;
 }
 
@@ -6885,7 +6885,7 @@ int ExplorerFrame_CompareStringOrdinal(const WCHAR* a1, int a2, const WCHAR* a3,
     {
         L"::{BB06C0E4-D293-4F75-8A90-CB05B6477EEE}", // System                     (default: redirected to Settings app)
         L"::{7B81BE6A-CE2B-4676-A29E-EB907A5126C5}", // Programs and Features      (default: not redirected)
-        NULL,
+        //NULL,
         // The following are unused but available for the future
         L"::{D450A8A1-9568-45C7-9C0E-B4F9FB4537BD}", // Installed Updates          (default: not redirected)
         L"::{17CD9488-1228-4B2F-88CE-4298E93E0966}", // Default Programs           (default: not redirected)
