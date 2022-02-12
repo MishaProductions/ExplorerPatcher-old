@@ -3118,7 +3118,18 @@ BOOL WINAPI DisableImmersiveMenus_SystemParametersInfoW(
 #pragma endregion
 
 
-#pragma region "Explorer: Hide search bar, Mica effect (private), hide navigation bar"
+#pragma region "Explorer: Hide search bar, Mica effect, hide navigation bar"
+
+bool CheckIfBuild22523OrHigher()
+{
+    struct _OSVERSIONINFOW VersionInformation; // [rsp+20h] [rbp-128h] BYREF
+
+    VersionInformation.dwOSVersionInfoSize = 276;
+    memset(&VersionInformation.dwMajorVersion, 0, 0x110ui64);
+    GetVersionExW(&VersionInformation);
+    return VersionInformation.dwBuildNumber > 0x57DC;
+}
+
 static HWND(__stdcall *explorerframe_SHCreateWorkerWindowFunc)(
     WNDPROC  	wndProc,
     HWND  	hWndParent,
@@ -3167,13 +3178,22 @@ HWND WINAPI explorerframe_SHCreateWorkerWindowHook(
     if (dwExStyle == 0x10000 && dwStyle == 0x46000000)
     {
 #ifdef USE_PRIVATE_INTERFACES
-        if (bMicaEffectOnTitlebar && result)
-        {
+        //if (result) // bMicaEffectOnTitlebar && result
+        //{
             BOOL value = TRUE;
             SetPropW(hWndParent, L"NavBarGlass", HANDLE_FLAG_INHERIT);
-            DwmSetWindowAttribute(hWndParent, DWMWA_MICA_EFFFECT, &value, sizeof(BOOL));
-            if (result) SetWindowSubclass(result, ExplorerMicaTitlebarSubclassProc, ExplorerMicaTitlebarSubclassProc, 0);
-        }
+
+            int v8 = (unsigned __int8)CheckIfBuild22523OrHigher() != 0 ? 0xFFFFFC21 : 0;
+            int pvAttribute = ((unsigned __int8)CheckIfBuild22523OrHigher() != 0) + 1;
+
+
+            HRESULT hr = DwmSetWindowAttribute(hWndParent, v8 + 1029, &pvAttribute, 4);
+            if (hr != 0)
+            {
+                printf("DwmSetWindowAttribute() failure: %d\n", hr);
+            }
+           if (result) SetWindowSubclass(result, ExplorerMicaTitlebarSubclassProc, ExplorerMicaTitlebarSubclassProc, 0);
+        //}
 #endif
 
         if (bHideExplorerSearchBar && result)
@@ -3183,6 +3203,12 @@ HWND WINAPI explorerframe_SHCreateWorkerWindowHook(
     }
     return result;
 }
+
+
+
+
+
+
 #pragma endregion
 
 
@@ -7729,6 +7755,14 @@ BOOL explorer_RegisterHotkeyHook(HWND hWnd, int id, UINT fsModifiers, UINT vk)
 }
 #pragma endregion
 
+INT64(*DWMExtendFrameFunc)(HWND hWnd, MARGINS* m);
+HRESULT DWMExtendFrameHook(HWND hWnd, MARGINS* m)
+{
+    if (GetPropW(hWnd, L"NavBarGlass"))
+        return 0;
+    else
+        return DwmExtendFrameIntoClientArea(hWnd, m);
+}
 
 DWORD InjectBasicFunctions(BOOL bIsExplorer, BOOL bInstall)
 {
@@ -7769,6 +7803,16 @@ DWORD InjectBasicFunctions(BOOL bIsExplorer, BOOL bInstall)
         }
         FreeLibrary(hShell32);
         FreeLibrary(hShell32);
+    }
+
+    HANDLE hDwmApi = LoadLibraryW(L"dwmapi.dll");
+    if (bInstall)
+    {
+        VnPatchIAT(hDwmApi, "dwmapi.dll", "DwmExtendFrameIntoClientArea", DWMExtendFrameHook);
+    }
+    else
+    {
+        FreeLibrary(hDwmApi);
     }
 
     HANDLE hShcore = LoadLibraryW(L"shcore.dll");
