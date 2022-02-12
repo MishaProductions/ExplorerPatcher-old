@@ -188,6 +188,7 @@ HRESULT WINAPI _DllGetClassObject(
 #ifdef _WIN64
 DWORD CheckForUpdatesThread(LPVOID unused)
 {
+    return 0; //Disable updates
     HRESULT hr = S_OK;
     HSTRING_HEADER header_AppIdHString;
     HSTRING AppIdHString = NULL;
