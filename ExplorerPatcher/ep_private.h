@@ -13,37 +13,43 @@ HANDLE SystemTray_LoadImageWHook(
 }
 #pragma endregion
 #pragma region Explorer / Control panel mica
-bool CheckIfWindowIsFloating(HWND param_1)
+bool CheckIfWindowIsFloating(HWND explorerHandle)
 {
-    HWND hWnd;
-    WCHAR buffer[105];
+    HWND hWnd = GetParent(explorerHandle);
 
+    //alloc our buffer
+    WCHAR buffer[100];
     buffer[0] = L'\0';
-    hWnd = GetParent(param_1);
+
     GetWindowTextW(hWnd, buffer, 100);
+
+    //Check if the parent window is a floating window
     return lstrcmpiW(buffer, L"FloatingWindow") == 0;
 }
-
+//This method actually applies the mica affect
 void ApplyDWMMica(HWND explorerHandle)
 {
-    HWND hwnd;
+    HWND hwnd = GetAncestor(explorerHandle, 2);
     WTA_OPTIONS options;
     MARGINS margins;
-    RECT explorerTopRect;
 
+    //Get explorer rect
+    RECT explorerTopRect;
     GetWindowRect(explorerHandle, &explorerTopRect);
-    hwnd = GetAncestor(explorerHandle, 2);
+
     MapWindowPoints(NULL, hwnd, (LPPOINT)&explorerTopRect, 2);
 
+    //Create margins for DwmExtendFrameIntoClientArea
     margins.cxLeftWidth = 0;
     margins.cxRightWidth = 0;
     margins.cyBottomHeight = 0;
     margins.cyTopHeight = explorerTopRect.bottom;
 
+    //We don't want to do anything if the window is floating
     if (CheckIfWindowIsFloating(explorerHandle)) {
         margins.cyTopHeight = 0;
     }
-    hwnd = GetAncestor(explorerHandle, 2);
+    //hwnd = GetAncestor(explorerHandle, 2);
 
     HRESULT hr = DwmExtendFrameIntoClientArea(hwnd, &margins);
     if (hr != 0) {
@@ -52,8 +58,9 @@ void ApplyDWMMica(HWND explorerHandle)
 
     HANDLE propVal = GetPropW(hwnd, (LPCWSTR)0xa91c);
     options.dwMask = WTNCA_NODRAWICON | WTNCA_NODRAWCAPTION;
-    options.dwFlags = propVal == NULL ? 3 : 0;
+    options.dwFlags = propVal == NULL ? 3 : 0; //propVal is null when it is control panel
 
+    //Disable caption and icon on window title bar
     hr = SetWindowThemeAttribute(hwnd, WTA_NONCLIENT, &options, 8);
     if (hr != 0) {
         printf("SetWindowThemeAttribute() failed\n");
@@ -61,10 +68,9 @@ void ApplyDWMMica(HWND explorerHandle)
 }
 LRESULT ReBarWindow32Hook(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass,
     DWORD_PTR dwRefData)
-
 {
     if (uMsg == 0x200b) {
-        //fix for dark mode
+        //fix for dark mode?
         if (wcsncmp((wchar_t*)lParam, L"DarkMode", 8) == 0) {
             lParam = lParam + 0x10;
         }
@@ -76,8 +82,6 @@ LRESULT ReBarWindow32Hook(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UI
 
     return DefSubclassProc(hWnd, uMsg, wParam, lParam);
 }
-
-
 LRESULT ExplorerMicaTitlebarSubclassProc(
     HWND hWnd,
     UINT uMsg,
@@ -89,17 +93,7 @@ LRESULT ExplorerMicaTitlebarSubclassProc(
 {
     if (uMsg == WM_ERASEBKGND) {
         if (!CheckIfWindowIsFloating(hWnd)) {
-            RECT explorerRect;
-
-            GetClientRect(hWnd, &explorerRect);
-            explorerRect.bottom = explorerRect.bottom + -1;
-            //CallDrawBitmap(wParam, &explorerRect, 0, 0xff);
-            explorerRect.top = explorerRect.bottom;
-            explorerRect.bottom = explorerRect.bottom + 1;
-            //CallDrawBitmap(wParam, &explorerRect, 0x30808080, 0xff);
-
-
-            //the 2 above functions were removed because they did nothing
+            //Prevent Explorer from drawing the default background
             return 1;
         }
         else {
@@ -124,6 +118,7 @@ LRESULT ExplorerMicaTitlebarSubclassProc(
             if ((short)wParam == 1) {
                 WORD classWord = GetClassWord((HWND)lParam, -0x20);
                 UINT rebarwindow32 = RegisterWindowMessageW(L"ReBarWindow32");
+
                 if (classWord == rebarwindow32) {
                     SetWindowSubclass((HWND)lParam, ReBarWindow32Hook, (UINT_PTR)ReBarWindow32Hook, 0);
                 }
@@ -135,6 +130,6 @@ LRESULT ExplorerMicaTitlebarSubclassProc(
         }
     }
 
-    return DefSubclassProc(hWnd, uMsg, (WPARAM)wParam, (LPARAM)lParam);
+    return DefSubclassProc(hWnd, uMsg, wParam, lParam);
 }
 #pragma endregion

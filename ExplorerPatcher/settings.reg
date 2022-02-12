@@ -543,18 +543,19 @@
 
 
 ;T About
-;e ExplorerPatcher
+;e ExplorerPatcher Rectify Edition
 ;e Version %VERSIONINFORMATIONSTRING%
 ;t © 2006-2022 VALINET Solutions SRL. All rights reserved.
+;t Modified by Misha for Rectify11
 ;e 
 ;e This project aims to bring back a productive working environment on Windows 11.
 ;t Proudly engineered by Valentin-Gabriel Radu.
-;y Visit project GitHub (https://github.com/valinet) 🡕
+;y Visit the orginal project GitHub (https://github.com/valinet) 🡕
 ;https://github.com/valinet
 ;q
-;y Visit web site (https://www.valinet.ro) 🡕
-;https://www.valinet.ro
-;y E-mail author (valentingabrielradu@gmail.com) 🡕
+;y Visit Rectify11 discord server: (https://discord.gg/k8BXudD39w) 🡕
+;https://discord.gg/k8BXudD39w
+;y E-mail orginal author (valentingabrielradu@gmail.com) 🡕
 ;mailto:valentingabrielradu@gmail.com
 ;y Donate (using PayPal) 🡕
 ;https://www.paypal.com/donate?business=valentingabrielradu%40gmail.com&no_recurring=0&item_name=ExplorerPatcher&currency_code=EUR
