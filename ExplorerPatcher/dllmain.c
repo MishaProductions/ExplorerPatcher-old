@@ -3187,7 +3187,6 @@ HWND WINAPI explorerframe_SHCreateWorkerWindowHook(
             int v8 = (unsigned __int8)CheckIfBuild22523OrHigher() != 0 ? 0xFFFFFC21 : 0;
             int pvAttribute = ((unsigned __int8)CheckIfBuild22523OrHigher() != 0) + 1;
 
-
             HRESULT hr = DwmSetWindowAttribute(hWndParent, v8 + 1029, &pvAttribute, 4);
             if (hr != 0)
             {
@@ -7756,13 +7755,17 @@ BOOL explorer_RegisterHotkeyHook(HWND hWnd, int id, UINT fsModifiers, UINT vk)
 }
 #pragma endregion
 
-INT64(*DWMExtendFrameFunc)(HWND hWnd, MARGINS* m);
+HRESULT(*DWMExtendFrameFunc)(HWND hWnd, MARGINS* m);
 HRESULT DWMExtendFrameHook(HWND hWnd, MARGINS* m)
 {
     if (GetPropW(hWnd, L"NavBarGlass"))
-        return 0;
+    {
+        //Do nothing, as explorer will reset the frame back to default
+    }
     else
+    {
         return DwmExtendFrameIntoClientArea(hWnd, m);
+    }
 }
 
 DWORD InjectBasicFunctions(BOOL bIsExplorer, BOOL bInstall)
@@ -7804,16 +7807,6 @@ DWORD InjectBasicFunctions(BOOL bIsExplorer, BOOL bInstall)
         }
         FreeLibrary(hShell32);
         FreeLibrary(hShell32);
-    }
-
-    HANDLE hDwmApi = LoadLibraryW(L"dwmapi.dll");
-    if (bInstall)
-    {
-        VnPatchIAT(hDwmApi, "dwmapi.dll", "DwmExtendFrameIntoClientArea", DWMExtendFrameHook);
-    }
-    else
-    {
-        FreeLibrary(hDwmApi);
     }
 
     HANDLE hShcore = LoadLibraryW(L"shcore.dll");
@@ -7881,6 +7874,14 @@ DWORD InjectBasicFunctions(BOOL bIsExplorer, BOOL bInstall)
         }
         FreeLibrary(hWindowsUIFileExplorer);
         FreeLibrary(hWindowsUIFileExplorer);
+    }
+
+    HANDLE hDwmApi = LoadLibraryW(L"uxtheme.dll");
+    if (hDwmApi == NULL) {
+        printf("LoadLibraryW(dwmapi.dll) failed\n");
+    }
+    if (!VnPatchDelayIAT(hDwmApi, "dwmapi.dll", "DwmExtendFrameIntoClientArea", DWMExtendFrameHook)) {
+        printf("DWMExtendFrameHook failed\n");
     }
 }
 
@@ -8141,10 +8142,32 @@ DWORD Inject(BOOL bIsExplorer)
 
 
 #ifdef USE_PRIVATE_INTERFACES
-    P_Icon_Dark_Search = ReadFromFile(L"C:\\Users\\root\\Downloads\\pri\\resources\\Search_Dark\\png\\32.png", &S_Icon_Dark_Search);
-    P_Icon_Light_Search = ReadFromFile(L"C:\\Users\\root\\Downloads\\pri\\resources\\Search_Light\\png\\32.png", &S_Icon_Light_Search);
-    P_Icon_Dark_TaskView = ReadFromFile(L"C:\\Users\\root\\Downloads\\pri\\resources\\TaskView_Dark\\png\\32.png", &S_Icon_Dark_TaskView);
-    P_Icon_Light_TaskView = ReadFromFile(L"C:\\Users\\root\\Downloads\\pri\\resources\\TaskView_Light\\png\\32.png", &S_Icon_Light_TaskView);
+    HINSTANCE hInstance = GetModuleHandle(L"C:\\Windows\\dxgi.dll");
+
+    //Search dark
+    HRSRC h = FindResourceW(hInstance, MAKEINTRESOURCE(IDB_SEARCH_32_DARK), RT_RCDATA);
+    HGLOBAL hg = LoadResource(hInstance, h);
+    P_Icon_Dark_Search = LockResource(hg);
+    S_Icon_Dark_Search = SizeofResource(hInstance, h);
+
+    //Search light
+    h = FindResourceW(hInstance, MAKEINTRESOURCE(IDB_SEARCH_32_LIGHT), RT_RCDATA);
+    hg = LoadResource(hInstance, h);
+    P_Icon_Light_Search = LockResource(hg);
+    S_Icon_Light_Search = SizeofResource(hInstance, h);
+
+    //Taskview Dark
+    h = FindResourceW(hInstance, MAKEINTRESOURCE(IDB_TASKVIEW_32_DARK), RT_RCDATA);
+    hg = LoadResource(hInstance, h);
+    P_Icon_Dark_TaskView = LockResource(hg);
+    S_Icon_Dark_TaskView = SizeofResource(hInstance, h);
+
+    //Taskview Light
+    h = FindResourceW(hInstance, MAKEINTRESOURCE(IDB_TASKVIEW_32_LIGHT), RT_RCDATA);
+    hg = LoadResource(hInstance, h);
+    P_Icon_Light_TaskView = LockResource(hg);
+    S_Icon_Light_TaskView = SizeofResource(hInstance, h);
+
     P_Icon_Dark_Widgets = ReadFromFile(L"C:\\Users\\root\\Downloads\\pri\\resources\\Widgets_Dark\\png\\32.png", &S_Icon_Dark_Widgets);
     P_Icon_Light_Widgets = ReadFromFile(L"C:\\Users\\root\\Downloads\\pri\\resources\\Widgets_Light\\png\\32.png", &S_Icon_Dark_Widgets);
 #endif
