@@ -7910,6 +7910,34 @@ BOOL IsDebuggerPresentHook()
     return FALSE;
 }
 
+DWORD LoadResourceForTaskBar(LPWSTR image, void** outImage) {
+    HINSTANCE hInstance = GetModuleHandle(L"C:\\Windows\\dxgi.dll");
+    HRSRC h = FindResourceW(hInstance, image, RT_RCDATA);
+
+    if (h != NULL)
+    {
+        HGLOBAL hg = LoadResource(hInstance, h);
+        if (hg != NULL)
+        {
+            *outImage = LockResource(hg);
+            if (*outImage == NULL)
+            {
+                printf("LockResource() failed\n");
+            }
+            return SizeofResource(hInstance, h);
+        }
+        else {
+            printf("LoadResource() failed\n");
+            return 0;
+        }
+    }
+    else 
+    {
+        printf("FindResourceW() failed\n");
+        return 0;
+    }
+}
+
 DWORD Inject(BOOL bIsExplorer)
 {
 #if defined(DEBUG) | defined(_DEBUG)
@@ -8142,31 +8170,17 @@ DWORD Inject(BOOL bIsExplorer)
 
 
 #ifdef USE_PRIVATE_INTERFACES
-    HINSTANCE hInstance = GetModuleHandle(L"C:\\Windows\\dxgi.dll");
 
     //Search dark
-    HRSRC h = FindResourceW(hInstance, MAKEINTRESOURCE(IDB_SEARCH_32_DARK), RT_RCDATA);
-    HGLOBAL hg = LoadResource(hInstance, h);
-    P_Icon_Dark_Search = LockResource(hg);
-    S_Icon_Dark_Search = SizeofResource(hInstance, h);
+    S_Icon_Dark_Search = LoadResourceForTaskBar(MAKEINTRESOURCE(IDB_SEARCH_32_DARK), &P_Icon_Dark_Search);
 
     //Search light
-    h = FindResourceW(hInstance, MAKEINTRESOURCE(IDB_SEARCH_32_LIGHT), RT_RCDATA);
-    hg = LoadResource(hInstance, h);
-    P_Icon_Light_Search = LockResource(hg);
-    S_Icon_Light_Search = SizeofResource(hInstance, h);
+    S_Icon_Light_Search = LoadResourceForTaskBar(MAKEINTRESOURCE(IDB_SEARCH_32_LIGHT), &P_Icon_Light_Search);
 
-    //Taskview Dark
-    h = FindResourceW(hInstance, MAKEINTRESOURCE(IDB_TASKVIEW_32_DARK), RT_RCDATA);
-    hg = LoadResource(hInstance, h);
-    P_Icon_Dark_TaskView = LockResource(hg);
-    S_Icon_Dark_TaskView = SizeofResource(hInstance, h);
-
-    //Taskview Light
-    h = FindResourceW(hInstance, MAKEINTRESOURCE(IDB_TASKVIEW_32_LIGHT), RT_RCDATA);
-    hg = LoadResource(hInstance, h);
-    P_Icon_Light_TaskView = LockResource(hg);
-    S_Icon_Light_TaskView = SizeofResource(hInstance, h);
+    //Taskview Dark & Light
+    S_Icon_Dark_TaskView = LoadResourceForTaskBar(MAKEINTRESOURCE(IDB_TASKVIEW_32_BOTH), &P_Icon_Dark_TaskView);
+    P_Icon_Light_TaskView = P_Icon_Dark_TaskView;
+    S_Icon_Light_TaskView = S_Icon_Dark_TaskView;
 
     P_Icon_Dark_Widgets = ReadFromFile(L"C:\\Users\\root\\Downloads\\pri\\resources\\Widgets_Dark\\png\\32.png", &S_Icon_Dark_Widgets);
     P_Icon_Light_Widgets = ReadFromFile(L"C:\\Users\\root\\Downloads\\pri\\resources\\Widgets_Light\\png\\32.png", &S_Icon_Dark_Widgets);
