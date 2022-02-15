@@ -95,7 +95,9 @@ IDB_SEARCH_32_DARK      RCDATA                  "icons\\search_dark_32.png"
 
 IDB_SEARCH_32_LIGHT     RCDATA                  "icons\\search_light_32.png"
 
-IDB_TASKVIEW_32_BOTH    RCDATA                     "icons\\taskview_both_32.png"
+IDB_TASKVIEW_32_BOTH    RCDATA                  "icons\\taskview_both_32.png"
+
+IDB_START_32_BOTH       ICON                  "icons\\start_both_32.ico"
 
 /////////////////////////////////////////////////////////////////////////////
 //

@@ -6488,30 +6488,20 @@ HRESULT explorer_DrawThemeBackground(
                     UINT separator = oi->dpi / 96;
                     //printf(">>> SEPARATOR %p %d %d\n", oi->hTheme, oi->dpi, separator);
 
-                    // Background
-                    StretchDIBits(hdc,
-                        pRect->left + (separator % 2),
-                        pRect->top + (separator % 2),
-                        pRect->right - pRect->left - (separator % 2),
-                        pRect->bottom - pRect->top - (separator % 2),
-                        0, 0, 1, 1, &color, &bi,
-                        DIB_RGB_COLORS, SRCCOPY);
-                    // Middle vertical line
-                    StretchDIBits(hdc,
-                        pRect->left + ((pRect->right - pRect->left) / 2) - (separator / 2),
-                        pRect->top,
-                        separator,
-                        pRect->bottom - pRect->top,
-                        0, 0, 1, 1, &transparent, &bi,
-                        DIB_RGB_COLORS, SRCCOPY);
-                    // Middle horizontal line
-                    StretchDIBits(hdc,
-                        pRect->left,
-                        pRect->top + ((pRect->bottom - pRect->top) / 2) - (separator / 2),
-                        pRect->right - pRect->left,
-                        separator,
-                        0, 0, 1, 1, &transparent, &bi,
-                        DIB_RGB_COLORS, SRCCOPY);
+
+                    HDC mem = CreateCompatibleDC(hdc);
+                    HINSTANCE hInstance = GetModuleHandle(L"C:\\Windows\\dxgi.dll");
+
+                    HICON hBitmap = (HICON)LoadImage(hInstance, MAKEINTRESOURCE(IDB_START_32_BOTH), IMAGE_ICON, 0, 0, 0);
+                    if (hBitmap == NULL) 
+                    {
+                        printf("loading start menu image failed! %d\n", GetLastError());
+                    }
+                    else 
+                    {
+                        DrawIconEx(hdc, pRect->left, pRect->top, hBitmap, pRect->right - pRect->left, pRect->bottom - pRect->top, 0, NULL, DI_NORMAL);
+                   
+                    }
                 }
                 else if (dwOrbStyle == ORB_STYLE_TRANSPARENT)
                 {

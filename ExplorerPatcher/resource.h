@@ -21,6 +21,7 @@
 #define IDB_SEARCH_32_LIGHT             112
 #define IDS_OPERATION_NONE              113
 #define IDB_TASKVIEW_32_BOTH            116
+#define IDB_START_32_BOTH               117
 #define VER_MINOR                       493
 #define VER_MAJOR                       22000
 
@@ -28,7 +29,7 @@
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        117
+#define _APS_NEXT_RESOURCE_VALUE        118
 #define _APS_NEXT_COMMAND_VALUE         40001
 #define _APS_NEXT_CONTROL_VALUE         1001
 #define _APS_NEXT_SYMED_VALUE           101
