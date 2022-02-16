@@ -357,69 +357,6 @@
 ;https://github.com/valinet/ExplorerPatcher/wiki/Simple-Window-Switcher
 
 
-
-;T Weather
-;t The following settings only apply to the Windows 10 taskbar:
-[HKEY_CURRENT_USER\Software\ExplorerPatcher]
-;b Show Weather on the taskbar
-;"Virtualized_{D17F1E1A-5919-4427-8F89-A1A8503CA3EB}_PeopleBand"=dword:00000000
-;c 5 Layout
-;x 0 Icon and description (default)
-;x 3 Icon and temperature
-;x 1 Icon only
-;x 4 Temperature only
-;x 5 Temperature and description
-"WeatherViewMode"=dword:00000000
-;c 2 Widget size
-;x 0 Enlarge/shrink to fit contents (default)
-;x 1 Fixed
-"WeatherFixedSize"=dword:00000000
-;c 7 Update frequency
-;x 60 Every minute
-;x 300 Every 5 minutes
-;x 900 Every 15 minutes
-;x 1200 Every 20 minutes (default)
-;x 1800 Every half an hour
-;x 3600 Every hour
-;x 7200 Every couple of hours
-"WeatherContentUpdateMode"=dword:000004B0
-;c 2 Temperature unit
-;x 0 Celsius (default)
-;x 1 Fahrenheit
-"WeatherTemperatureUnit"=dword:00000000
-;w Location
-;Search City or Zip Code; the program looks up "weather in /* what you typed */" on Google. Leave blank for the default value (current location).
-;Current location (default)
-"WeatherLocation"=""
-;;;c 2 Location accuracy
-;;;x 0 Generic (based on the IP address) (default)
-;;;x 1 Precise (geolocation)
-;;"WeatherLocationType"=dword:00000000
-;w Language
-;Type the short code for the language you'd like the weather data to be displayed in. For example, try "en", "ro", "de", "fr" etc. Leave blank for the default value (language of the Windows OS).
-;System language (default)
-"WeatherLanguage"=""
-;c 3 Color scheme
-;x 0 Follow system setting (default)
-;x 1 Light
-;x 2 Dark
-"WeatherTheme"=dword:00000000
-;c 3 Corner preference
-;x 2 Rounded (default)
-;x 3 Small rounded
-;x 1 Not rounded
-"WeatherWindowCornerPreference"=dword:00000002
-;q
-;t Weather data courtesy of Google, and weather.com.
-;y Learn more about the Weather taskbar widget 🡕
-;https://github.com/valinet/ExplorerPatcher/wiki/Weather
-;u Update weather now
-;update_weather
-;u Clear weather widget local data
-;clear_data_weather
-
-
-
 ;T Other
 [HKEY_CURRENT_USER\Software\ExplorerPatcher]
 ;b Remember last used section in this window
