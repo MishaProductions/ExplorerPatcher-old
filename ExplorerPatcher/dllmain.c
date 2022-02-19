@@ -8821,7 +8821,7 @@ DWORD Inject(BOOL bIsExplorer)
     }
 
 
-
+    //Misha: what does this do and why is it disabled?
     /*if (bHookStartMenu)
     {
         HookStartMenuParams* params2 = calloc(1, sizeof(HookStartMenuParams));
