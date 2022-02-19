@@ -69,6 +69,8 @@ DWORD bMonitorOverride = TRUE;
 DWORD bOpenAtLogon = FALSE;
 DWORD bClockFlyoutOnWinC = FALSE;
 DWORD bDisableImmersiveContextMenu = FALSE;
+DWORD bDisableWindows11ContextMenu = FALSE;
+DWORD bDisableModernSearchBar = FALSE;
 DWORD bClassicThemeMitigations = FALSE;
 DWORD bWasClassicThemeMitigationsSet = FALSE;
 DWORD bHookStartMenu = TRUE;
@@ -5342,6 +5344,91 @@ void WINAPI LoadSettings(LPARAM lParam)
             &bDisableImmersiveContextMenu,
             &dwSize
         );
+        dwSize = sizeof(DWORD);
+        RegQueryValueExW(
+            hKey,
+            TEXT("DisableWindows11ContextMenu"),
+            0,
+            NULL,
+            &bDisableWindows11ContextMenu,
+            &dwSize
+        );
+
+        //Misha: create/delete key if we are disabling the win11 explorer context menu
+        if (bDisableWindows11ContextMenu == 0)
+        {
+            //disable win11 context menu
+
+            HKEY result;
+            HKEY inproc;
+            LSTATUS hr = RegCreateKeyEx(HKEY_CURRENT_USER, L"Software\\Classes\\CLSID\\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}", 0, NULL, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &result, NULL);
+            if (hr != 0)
+            {
+                printf("RegCreateKeyEx() failed: %d\n", hr);
+            }
+
+            hr = RegCreateKeyEx(result, L"InprocServer32", 0, NULL, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &inproc, NULL);
+            if (hr != 0)
+            {
+                printf("RegCreateKeyEx() x2 failed: %d\n", hr);
+            }
+
+            LPCTSTR data = L"";
+
+            RegSetValueExW(inproc, NULL, 0, REG_SZ, (LPBYTE)data, sizeof(wchar_t)* (wcslen(data) + 1));
+        }
+        else
+        {
+            //enable win11 context menu
+            LSTATUS hr = RegDeleteTree(HKEY_CURRENT_USER, L"Software\\Classes\\CLSID\\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}");
+            if (hr != 0)
+            {
+                printf("RegDeleteKey() failed: %d\n", hr);
+            }
+        }
+
+        dwSize = sizeof(DWORD);
+        RegQueryValueExW(
+            hKey,
+            TEXT("DisableModernSearchBar"),
+            0,
+            NULL,
+            &bDisableModernSearchBar,
+            &dwSize
+        );
+
+        if (bDisableModernSearchBar == 0) {
+            printf("disable modern search bar\n");
+
+            HKEY result;
+            HKEY inproc;
+            LSTATUS hr = RegCreateKeyEx(HKEY_CURRENT_USER, L"Software\\Classes\\CLSID\\{1d64637d-31e9-4b06-9124-e83fb178ac6e}", 0, NULL, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &result, NULL);
+            if (hr != 0)
+            {
+                printf("RegCreateKeyEx() failed: %d\n", hr);
+            }
+
+            hr = RegCreateKeyEx(result, L"TreatAs", 0, NULL, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &inproc, NULL);
+            if (hr != 0)
+            {
+                printf("RegCreateKeyEx() x2 failed: %d\n", hr);
+            }
+
+            LPCTSTR data = L"{64bc32b5-4eec-4de7-972d-bd8bd0324537}";
+
+            RegSetValueExW(inproc, NULL, 0, REG_SZ, (LPBYTE)data, sizeof(wchar_t) * (wcslen(data) + 1));
+        }
+        else 
+        {
+            //enable modern seach bar
+            LSTATUS hr = RegDeleteTree(HKEY_CURRENT_USER, L"Software\\Classes\\CLSID\\{1d64637d-31e9-4b06-9124-e83fb178ac6e}");
+            if (hr != 0)
+            {
+                printf("RegDeleteKey() failed: %d\n", hr);
+            }
+        }
+
+
         dwTemp = FALSE;
         dwSize = sizeof(DWORD);
         RegQueryValueExW(

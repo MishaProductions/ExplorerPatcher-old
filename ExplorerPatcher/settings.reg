@@ -144,18 +144,18 @@
 [-HKEY_CURRENT_USER\Software\Classes\CLSID\{d93ed569-3b3e-4bff-8355-3c44f6a52bb5}\InprocServer32]
 ;d Disable the Windows 11 command bar *
 @=""
-[-HKEY_CURRENT_USER\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32]
-;d Disable the Windows 11 context menu *
-@=""
+[HKEY_CURRENT_USER\Software\ExplorerPatcher]
+;i Disable the Windows 11 context menu *
+"DisableWindows11ContextMenu"=dword:00000001
 [HKEY_CURRENT_USER\Software\ExplorerPatcher]
 ;i Use immersive menus when displaying Windows 10 context menus **
 "DisableImmersiveContextMenu"=dword:00000000
 [-HKEY_CURRENT_USER\Software\Classes\CLSID\{056440FD-8568-48e7-A632-72157243B55B}\InprocServer32]
 ;d Disable navigation bar **
 @=""
-[-HKEY_CURRENT_USER\Software\Classes\CLSID\{1d64637d-31e9-4b06-9124-e83fb178ac6e}\TreatAs]
-;d Disable modern search bar
-@="{64bc32b5-4eec-4de7-972d-bd8bd0324537}"
+[HKEY_CURRENT_USER\Software\ExplorerPatcher]
+;i Disable modern search bar
+"DisableModernSearchBar"=dword:00000000
 [HKEY_CURRENT_USER\Software\ExplorerPatcher]
 ;b Hide search bar completely **
 "HideExplorerSearchBar"=dword:00000000
