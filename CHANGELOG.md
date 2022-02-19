@@ -8,7 +8,7 @@ Tested on OS build 22000.493.
 
 #### New features
 
-* Built-in support for OS build 22000.493.
+* Built-in support for OS build 22000.493, OS build 22000.527 (Preview).
 * Implemented Weather widget for the classic taskbar, similar to what is available in the more recent updates to Windows 10. Read more about it [here](https://github.com/valinet/ExplorerPatcher/wiki/Weather).
 * Implemented 2 features that help in replacing the functionality of the quick launch toolbar with pinned taskbar items. Read more about it [here](https://github.com/valinet/ExplorerPatcher/discussions/819) (.7).
 * Implemented option to have Start open on a specific monitor (#821) (.8)
@@ -23,6 +23,7 @@ Tested on OS build 22000.493.
 * The weather widget supports setting window corner preference (rounded/not rounded) (.8)
 * Option to clear weather widget local data (.10, .11)
 * Installer sets a Start menu shortcut for the "Properties" window (.11)
+* Support for high contrast themes in the "Properties" window and in the weather widget (#885) (.15)
 
 #### Fixes
 
@@ -37,6 +38,9 @@ Tested on OS build 22000.493.
 * Fixed a bug that made the weather flyout open with noticeable delay under certain circumstances (.5)
 * Fixed a bug that prevented correct operation on builds without built-in symbols (#783) (.5)
 * Fixed several race conditions that could lead to incorrect operation of the weather widget (for example, `explorer.exe` crashing when disabling or enabling the widget) (.6)
+* The weather widget positions and sizes itself with respect to the text size accessibility setting as well ([#734](https://github.com/valinet/ExplorerPatcher/discussions/734#discussioncomment-2190218)) (.14)
+* Fixed a bug that could lead to a crash when `explorer.exe` starts (#879) (.15)
+* Fixed a bug that could prevent the weather widget from launching under certain conditions (.15)
 
 ## 22000.469.41
 

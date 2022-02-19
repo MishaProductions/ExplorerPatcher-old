@@ -23,6 +23,7 @@
 #pragma comment(lib, "Dbghelp.lib")
 #include <tlhelp32.h>
 #include <UIAutomationClient.h>
+#include <math.h>
 #ifdef _WIN64
 #include <valinet/pdb/pdb.h>
 #endif
@@ -3973,11 +3974,24 @@ SIZE WINAPI PeopleButton_CalculateMinimumSizeHook(void* _this, SIZE* pSz)
                 mi.cbSize = sizeof(MONITORINFO);
                 if (GetMonitorInfoW(hMonitor, &mi))
                 {
+                    DWORD dwTextScaleFactor = 0, dwSize = sizeof(DWORD);
+                    if (SHRegGetValueFromHKCUHKLMFunc && SHRegGetValueFromHKCUHKLMFunc(
+                        TEXT("SOFTWARE\\Microsoft\\Accessibility"),
+                        TEXT("TextScaleFactor"),
+                        SRRF_RT_REG_DWORD,
+                        NULL,
+                        &dwTextScaleFactor,
+                        (LPDWORD)(&dwSize)
+                    ) != ERROR_SUCCESS)
+                    {
+                        dwTextScaleFactor = 100;
+                    }
+
                     RECT rcWeatherFlyoutWindow;
                     rcWeatherFlyoutWindow.left = mi.rcWork.left;
                     rcWeatherFlyoutWindow.top = mi.rcWork.top;
-                    rcWeatherFlyoutWindow.right = rcWeatherFlyoutWindow.left + MulDiv(EP_WEATHER_WIDTH, dpiX, 96);
-                    rcWeatherFlyoutWindow.bottom = rcWeatherFlyoutWindow.top + MulDiv(EP_WEATHER_HEIGHT, dpiX, 96);
+                    rcWeatherFlyoutWindow.right = rcWeatherFlyoutWindow.left + MulDiv(MulDiv(EP_WEATHER_WIDTH, dpiX, 96), dwTextScaleFactor, 100);
+                    rcWeatherFlyoutWindow.bottom = rcWeatherFlyoutWindow.top + MulDiv(MulDiv(EP_WEATHER_HEIGHT, dpiX, 96), dwTextScaleFactor, 100);
                     if (FAILED(epw->lpVtbl->Initialize(epw, wszEPWeatherKillswitch, bAllocConsole, EP_WEATHER_PROVIDER_GOOGLE, rt, rt, dwWeatherTemperatureUnit, dwWeatherUpdateSchedule * 1000, rcWeatherFlyoutWindow, dwWeatherTheme, dwWeatherGeolocationMode, &hWndWeatherFlyout)))
                     {
                         epw->lpVtbl->Release(epw);
@@ -4221,7 +4235,7 @@ __int64 __fastcall PeopleBand_DrawTextWithGlowHook(
                             }
                             else
                             {
-                                rgbColor = GetSysColor(COLOR_WINDOWTEXT);
+                                rgbColor = GetSysColor(COLOR_BTNTEXT);
                             }
                             HFONT hOldFont = SelectFont(hDC, hFont);
                             if (bEmptyData)
@@ -4639,71 +4653,74 @@ BOOL explorer_SetChildWindowNoActivateHook(HWND hWnd)
     if (!wcscmp(className, L"TrayButton"))
     {
         uintptr_t Instance = *(uintptr_t*)GetWindowLongPtrW(hWnd, 0);
-        uintptr_t TrayButton_GetComponentName = *(INT_PTR(WINAPI**)())(Instance + 304);
-        if (!IsBadCodePtr(TrayButton_GetComponentName))
+        if (Instance)
         {
-            wchar_t* wszComponentName = (const WCHAR*)(*(uintptr_t (**)(void))(Instance + 304))();
-            if (!wcscmp(wszComponentName, L"CortanaButton"))
+            uintptr_t TrayButton_GetComponentName = *(INT_PTR(WINAPI**)())(Instance + 304);
+            if (!IsBadCodePtr(TrayButton_GetComponentName))
             {
-                DWORD dwOldProtect;
-                VirtualProtect(Instance + 160, sizeof(uintptr_t), PAGE_READWRITE, &dwOldProtect);
-                if (!Widgets_OnClickFunc) Widgets_OnClickFunc = *(uintptr_t*)(Instance + 160);
-                *(uintptr_t*)(Instance + 160) = Widgets_OnClickHook;    // OnClick
-                VirtualProtect(Instance + 160, sizeof(uintptr_t), dwOldProtect, &dwOldProtect);
-                VirtualProtect(Instance + 216, sizeof(uintptr_t), PAGE_READWRITE, &dwOldProtect);
-                if (!Widgets_GetTooltipTextFunc) Widgets_GetTooltipTextFunc = *(uintptr_t*)(Instance + 216);
-                *(uintptr_t*)(Instance + 216) = Widgets_GetTooltipTextHook; // OnTooltipShow
-                VirtualProtect(Instance + 216, sizeof(uintptr_t), dwOldProtect, &dwOldProtect);
-            }
-            else if (!wcscmp(wszComponentName, L"MultitaskingButton"))
-            {
-                DWORD dwOldProtect;
-                VirtualProtect(Instance + 160, sizeof(uintptr_t), PAGE_READWRITE, &dwOldProtect);
-                *(uintptr_t*)(Instance + 160) = ToggleTaskView;    // OnClick
-                VirtualProtect(Instance + 160, sizeof(uintptr_t), dwOldProtect, &dwOldProtect);
-            }
-            else if (!wcscmp(wszComponentName, L"PeopleButton"))
-            {
-                DWORD dwOldProtect;
-
-                uintptr_t PeopleButton_Instance = *((uintptr_t*)GetWindowLongPtrW(hWnd, 0) + 17);
-
-                VirtualProtect(PeopleButton_Instance + 32, sizeof(uintptr_t), PAGE_READWRITE, &dwOldProtect);
-                if (!PeopleButton_CalculateMinimumSizeFunc) PeopleButton_CalculateMinimumSizeFunc = *(uintptr_t*)(PeopleButton_Instance + 32);
-                *(uintptr_t*)(PeopleButton_Instance + 32) = PeopleButton_CalculateMinimumSizeHook; // CalculateMinimumSize
-                VirtualProtect(PeopleButton_Instance + 32, sizeof(uintptr_t), dwOldProtect, &dwOldProtect);
-
-                VirtualProtect(Instance + 224, sizeof(uintptr_t), PAGE_READWRITE, &dwOldProtect);
-                if (!PeopleButton_ShowTooltipFunc) PeopleButton_ShowTooltipFunc = *(uintptr_t*)(Instance + 224);
-                *(uintptr_t*)(Instance + 224) = PeopleButton_ShowTooltipHook; // OnTooltipShow
-                VirtualProtect(Instance + 224, sizeof(uintptr_t), dwOldProtect, &dwOldProtect);
-
-                VirtualProtect(Instance + 160, sizeof(uintptr_t), PAGE_READWRITE, &dwOldProtect);
-                if (!PeopleButton_OnClickFunc) PeopleButton_OnClickFunc = *(uintptr_t*)(Instance + 160);
-                *(uintptr_t*)(Instance + 160) = PeopleButton_OnClickHook;    // OnClick
-                VirtualProtect(Instance + 160, sizeof(uintptr_t), dwOldProtect, &dwOldProtect);
-
-                PeopleButton_LastHWND = hWnd;
-                SetWindowSubclass(hWnd, PeopleButton_SubclassProc, PeopleButton_SubclassProc, 0);
-
-                AcquireSRWLockExclusive(&lock_epw);
-                if (!epw)
+                wchar_t* wszComponentName = (const WCHAR*)(*(uintptr_t(**)(void))(Instance + 304))();
+                if (!wcscmp(wszComponentName, L"CortanaButton"))
                 {
-                    if (SUCCEEDED(CoCreateInstance(&CLSID_EPWeather, NULL, CLSCTX_LOCAL_SERVER, &IID_IEPWeather, &epw)) && epw)
-                    {
-                        epw->lpVtbl->SetNotifyWindow(epw, hWnd);
-
-                        WCHAR wszBuffer[MAX_PATH];
-                        ZeroMemory(wszBuffer, sizeof(WCHAR) * MAX_PATH);
-                        HMODULE hModule = GetModuleHandleW(L"pnidui.dll");
-                        if (hModule)
-                        {
-                            LoadStringW(hModule, 35, wszBuffer, MAX_PATH);
-                        }
-                        SetWindowTextW(hWnd, wszBuffer);
-                    }
+                    DWORD dwOldProtect;
+                    VirtualProtect(Instance + 160, sizeof(uintptr_t), PAGE_READWRITE, &dwOldProtect);
+                    if (!Widgets_OnClickFunc) Widgets_OnClickFunc = *(uintptr_t*)(Instance + 160);
+                    *(uintptr_t*)(Instance + 160) = Widgets_OnClickHook;    // OnClick
+                    VirtualProtect(Instance + 160, sizeof(uintptr_t), dwOldProtect, &dwOldProtect);
+                    VirtualProtect(Instance + 216, sizeof(uintptr_t), PAGE_READWRITE, &dwOldProtect);
+                    if (!Widgets_GetTooltipTextFunc) Widgets_GetTooltipTextFunc = *(uintptr_t*)(Instance + 216);
+                    *(uintptr_t*)(Instance + 216) = Widgets_GetTooltipTextHook; // OnTooltipShow
+                    VirtualProtect(Instance + 216, sizeof(uintptr_t), dwOldProtect, &dwOldProtect);
                 }
-                ReleaseSRWLockExclusive(&lock_epw);
+                else if (!wcscmp(wszComponentName, L"MultitaskingButton"))
+                {
+                    DWORD dwOldProtect;
+                    VirtualProtect(Instance + 160, sizeof(uintptr_t), PAGE_READWRITE, &dwOldProtect);
+                    *(uintptr_t*)(Instance + 160) = ToggleTaskView;    // OnClick
+                    VirtualProtect(Instance + 160, sizeof(uintptr_t), dwOldProtect, &dwOldProtect);
+                }
+                else if (!wcscmp(wszComponentName, L"PeopleButton"))
+                {
+                    DWORD dwOldProtect;
+
+                    uintptr_t PeopleButton_Instance = *((uintptr_t*)GetWindowLongPtrW(hWnd, 0) + 17);
+
+                    VirtualProtect(PeopleButton_Instance + 32, sizeof(uintptr_t), PAGE_READWRITE, &dwOldProtect);
+                    if (!PeopleButton_CalculateMinimumSizeFunc) PeopleButton_CalculateMinimumSizeFunc = *(uintptr_t*)(PeopleButton_Instance + 32);
+                    *(uintptr_t*)(PeopleButton_Instance + 32) = PeopleButton_CalculateMinimumSizeHook; // CalculateMinimumSize
+                    VirtualProtect(PeopleButton_Instance + 32, sizeof(uintptr_t), dwOldProtect, &dwOldProtect);
+
+                    VirtualProtect(Instance + 224, sizeof(uintptr_t), PAGE_READWRITE, &dwOldProtect);
+                    if (!PeopleButton_ShowTooltipFunc) PeopleButton_ShowTooltipFunc = *(uintptr_t*)(Instance + 224);
+                    *(uintptr_t*)(Instance + 224) = PeopleButton_ShowTooltipHook; // OnTooltipShow
+                    VirtualProtect(Instance + 224, sizeof(uintptr_t), dwOldProtect, &dwOldProtect);
+
+                    VirtualProtect(Instance + 160, sizeof(uintptr_t), PAGE_READWRITE, &dwOldProtect);
+                    if (!PeopleButton_OnClickFunc) PeopleButton_OnClickFunc = *(uintptr_t*)(Instance + 160);
+                    *(uintptr_t*)(Instance + 160) = PeopleButton_OnClickHook;    // OnClick
+                    VirtualProtect(Instance + 160, sizeof(uintptr_t), dwOldProtect, &dwOldProtect);
+
+                    PeopleButton_LastHWND = hWnd;
+                    SetWindowSubclass(hWnd, PeopleButton_SubclassProc, PeopleButton_SubclassProc, 0);
+
+                    AcquireSRWLockExclusive(&lock_epw);
+                    if (!epw)
+                    {
+                        if (SUCCEEDED(CoCreateInstance(&CLSID_EPWeather, NULL, CLSCTX_LOCAL_SERVER, &IID_IEPWeather, &epw)) && epw)
+                        {
+                            epw->lpVtbl->SetNotifyWindow(epw, hWnd);
+
+                            WCHAR wszBuffer[MAX_PATH];
+                            ZeroMemory(wszBuffer, sizeof(WCHAR) * MAX_PATH);
+                            HMODULE hModule = GetModuleHandleW(L"pnidui.dll");
+                            if (hModule)
+                            {
+                                LoadStringW(hModule, 35, wszBuffer, MAX_PATH);
+                            }
+                            SetWindowTextW(hWnd, wszBuffer);
+                        }
+                    }
+                    ReleaseSRWLockExclusive(&lock_epw);
+                }
             }
         }
     }
@@ -6273,12 +6290,15 @@ void Explorer_RefreshClockHelper(HWND hClockButton)
     // we call v_Initialize because all it does is to query the
     // registry and update the internal state to display seconds or not
     // to get the offset, simply inspect the vtable of ClockButton
-    ((void(*)(void*))(*(INT64*)((*(INT64*)ClockButtonInstance) + 6 * sizeof(uintptr_t))))(ClockButtonInstance); // v_Initialize
-    // we need to refresh the button; for the text to actually change, we need to set this:
-    // inspect ClockButton::v_OnTimer
-    *((BYTE*)ClockButtonInstance + 547) = 1;
-    // then, we simply invalidate the area
-    InvalidateRect(hClockButton, NULL, TRUE);
+    if (ClockButtonInstance)
+    {
+        ((void(*)(void*))(*(INT64*)((*(INT64*)ClockButtonInstance) + 6 * sizeof(uintptr_t))))(ClockButtonInstance); // v_Initialize
+        // we need to refresh the button; for the text to actually change, we need to set this:
+        // inspect ClockButton::v_OnTimer
+        *((BYTE*)ClockButtonInstance + 547) = 1;
+        // then, we simply invalidate the area
+        InvalidateRect(hClockButton, NULL, TRUE);
+    }
 }
 
 void Explorer_RefreshClock(int unused)
@@ -6329,10 +6349,15 @@ void Explorer_TogglePeopleButton(int unused)
     if (hShellTray_Wnd)
     {
         INT64* CTrayInstance = (BYTE*)(GetWindowLongPtrW(hShellTray_Wnd, 0)); // -> CTray
-        const unsigned int TRAYUI_OFFSET_IN_CTRAY = 110;
-        INT64* TrayUIInstance = *((INT64*)CTrayInstance + TRAYUI_OFFSET_IN_CTRAY);
-
-        ((void(*)(void*))(*(INT64*)((*(INT64*)TrayUIInstance) + 57 * sizeof(uintptr_t))))(TrayUIInstance);
+        if (CTrayInstance)
+        {
+            const unsigned int TRAYUI_OFFSET_IN_CTRAY = 110;
+            INT64* TrayUIInstance = *((INT64*)CTrayInstance + TRAYUI_OFFSET_IN_CTRAY);
+            if (TrayUIInstance)
+            {
+                ((void(*)(void*))(*(INT64*)((*(INT64*)TrayUIInstance) + 57 * sizeof(uintptr_t))))(TrayUIInstance);
+            }
+        }
     }
 }
 
@@ -6342,10 +6367,15 @@ void Explorer_ToggleTouchpad(int unused)
     if (hShellTray_Wnd)
     {
         INT64* CTrayInstance = (BYTE*)(GetWindowLongPtrW(hShellTray_Wnd, 0)); // -> CTray
-        const unsigned int TRAYUI_OFFSET_IN_CTRAY = 110;
-        INT64* TrayUIInstance = *((INT64*)CTrayInstance + TRAYUI_OFFSET_IN_CTRAY);
-
-        ((void(*)(void*))(*(INT64*)((*(INT64*)TrayUIInstance) + 60 * sizeof(uintptr_t))))(TrayUIInstance);
+        if (CTrayInstance)
+        {
+            const unsigned int TRAYUI_OFFSET_IN_CTRAY = 110;
+            INT64* TrayUIInstance = *((INT64*)CTrayInstance + TRAYUI_OFFSET_IN_CTRAY);
+            if (TrayUIInstance)
+            {
+                ((void(*)(void*))(*(INT64*)((*(INT64*)TrayUIInstance) + 60 * sizeof(uintptr_t))))(TrayUIInstance);
+            }
+        }
     }
 }
 #pragma endregion
@@ -8229,11 +8259,28 @@ DWORD Inject(BOOL bIsExplorer)
         return;
     }
 
-
+#ifdef _WIN64
     wszEPWeatherKillswitch = calloc(sizeof(WCHAR), MAX_PATH);
-    rand_string(wszEPWeatherKillswitch, MAX_PATH / 2);
-    wcscat_s(wszEPWeatherKillswitch, MAX_PATH, _T(EP_Weather_Killswitch));
+    srand(time(NULL));
+    rand_string(wszEPWeatherKillswitch, MAX_PATH / 2 - 1);
+    swprintf_s(wszEPWeatherKillswitch, sizeof(_T(EP_Weather_Killswitch)) / sizeof(WCHAR), L"%s", _T(EP_Weather_Killswitch));
+    wszEPWeatherKillswitch[wcslen(wszEPWeatherKillswitch)] = L'_';
+    //wprintf(L"%s\n", wszEPWeatherKillswitch);
     hEPWeatherKillswitch = CreateMutexW(NULL, TRUE, wszEPWeatherKillswitch);
+    /*while (TRUE)
+    {
+        hEPWeatherKillswitch = CreateMutexW(NULL, TRUE, wszEPWeatherKillswitch);
+        if (GetLastError() == ERROR_ALREADY_EXISTS)
+        {
+            WaitForSingleObject(hEPWeatherKillswitch, INFINITE);
+            CloseHandle(hEPWeatherKillswitch);
+        }
+        else
+        {
+            break;
+        }
+    }*/
+#endif
 
 
 #ifdef _WIN64
