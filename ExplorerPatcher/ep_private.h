@@ -55,7 +55,7 @@ void ApplyMicaToExplorerTitlebar(HWND navBar)
 	WTA_OPTIONS options;
 
 	options.dwMask = WTNCA_NODRAWICON | WTNCA_NODRAWCAPTION;
-	options.dwFlags = 3;// propVal == NULL ? 3 : 0; //propVal is null when it is control panel
+	options.dwFlags = GetPropW(root, (LPCWSTR)0xa91c) == NULL ? 3 : 0;
 
 	hr = SetWindowThemeAttribute(root, WTA_NONCLIENT, &options, 8);
 	if (hr != 0) {
