@@ -22,8 +22,10 @@ LRESULT ReBarWindow32Hook(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UI
 {
 	if (uMsg == 0x200b) {
 		//fix for dark mode
+		//Normally DarkModeInactiveNavbarComposited
 		if (wcsncmp((wchar_t*)lParam, L"DarkMode", 8) == 0) {
-			lParam = lParam + 0x10;
+			//Set it to InactiveNavbarComposited
+			lParam = lParam + (sizeof(wchar_t) * 8);
 		}
 	}
 	else if (uMsg == WM_DESTROY) {
