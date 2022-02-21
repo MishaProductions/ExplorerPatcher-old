@@ -9,6 +9,10 @@ HANDLE SystemTray_LoadImageWHook(
 	int       cy,
 	UINT      fuLoad
 ) {
+	char buffer[100];
+	GetModuleBaseNameA(GetCurrentProcess(), hInst, buffer, 100);
+	printf("LoadImageW(): %d in %s, type: %d\n", name, buffer, type);
+
 	return LoadImageW(hInst, name, type, cx, cy, fuLoad);
 }
 #pragma endregion
