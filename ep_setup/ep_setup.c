@@ -517,6 +517,19 @@ int WINAPI wWinMain(
             wcscat_s(wszPath, MAX_PATH, L"\\WebView2Loader.dll");
             bOk = InstallResource(TRUE, hInstance, IDR_MS_WEBVIEW2_LOADER, wszPath);
         }
+        if (argc >= 2)
+        {
+            wcsncpy_s(wszPath, MAX_PATH, wargv[1], MAX_PATH);
+        }
+        else
+        {
+            GetCurrentDirectoryW(MAX_PATH, wszPath);
+        }
+        if (bOk)
+        {
+            wcscat_s(wszPath, MAX_PATH, L"\\wincorlib.dll");
+            bOk = InstallResource(TRUE, hInstance, IDR_EP_STARTMENU, wszPath);
+        }
         return 0;
     }
 
@@ -868,6 +881,15 @@ int WINAPI wWinMain(
                 GetSystemDirectoryW(wszOrigPath, MAX_PATH);
                 wcscat_s(wszOrigPath, MAX_PATH, L"\\wincorlib.dll");
                 bOk = CreateSymbolicLinkW(wszPath, wszOrigPath, 0);
+            }
+        }
+        if (bOk && IsWindows11())
+        {
+            GetWindowsDirectoryW(wszPath, MAX_PATH);
+            wcscat_s(wszPath, MAX_PATH, L"\\SystemApps\\Microsoft.Windows.StartMenuExperienceHost_cw5n1h2txyewy\\AppResolverLegacy.dll");
+            if (ShouldDownloadOrDelete(bInstall, hInstance, wszPath, "BAD744C69B92BBD508D3950B41822683") && IsConnectedToInternet() == TRUE)
+            {
+                DownloadFile(L"https://github.com/valinet/ExplorerPatcher/files/8148997/AppResolverLegacy.dll.txt", 10 * 1024 * 1024, wszPath);
             }
         }
         if (bOk && IsWindows11())

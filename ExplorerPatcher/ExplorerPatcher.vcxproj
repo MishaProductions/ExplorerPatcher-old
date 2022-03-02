@@ -260,6 +260,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="lvt.c" />
     <ClCompile Include="SettingsMonitor.c" />
     <ClCompile Include="StartMenu.c">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
@@ -316,6 +317,7 @@
     <ClInclude Include="hooking.h" />
     <ClInclude Include="ep_private.h" />
     <ClInclude Include="ImmersiveFlyouts.h" />
+    <ClInclude Include="lvt.h" />
     <ClInclude Include="queryversion.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="SettingsMonitor.h" />
