@@ -362,6 +362,12 @@ LSTATUS GUI_Internal_RegSetValueExW(
             return ERROR_SUCCESS;
         }
         PostMessageW(FindWindowW(L"Shell_TrayWnd", NULL), WM_COMMAND, 435, 0);
+        DWORD dwProcessId = 0;
+        GetWindowThreadProcessId(FindWindowW(L"Shell_TrayWnd", NULL), &dwProcessId);
+        if (dwProcessId)
+        {
+            AllowSetForegroundWindow(dwProcessId);
+        }
         return ERROR_SUCCESS;
     }
     else if (!wcscmp(lpValueName, L"Virtualized_" _T(EP_CLSID) L"_Start_MaximumFrequentApps"))
@@ -827,7 +833,7 @@ static BOOL GUI_Build(HDC hDC, HWND hwnd, POINT pt)
     {
         HRSRC hRscr = FindResource(
             hModule,
-            MAKEINTRESOURCE(IDR_REGISTRY1),
+            IsWindows11() ? MAKEINTRESOURCE(IDR_REGISTRY1) : MAKEINTRESOURCE(IDR_REGISTRY2),
             RT_RCDATA
         );
         if (!hRscr)
@@ -908,6 +914,12 @@ static BOOL GUI_Build(HDC hDC, HWND hwnd, POINT pt)
             SetTextColor(hdcPaint, GetSysColor(COLOR_WINDOWTEXT));
             SetBkMode(hdcPaint, TRANSPARENT);
         }
+        else if (!IsWindows11() && hDC)
+        {
+            COLORREF oldcr = SetBkColor(hdcPaint, g_darkModeEnabled ? RGB(0, 0, 0) : RGB(255, 255, 255));
+            ExtTextOutW(hdcPaint, 0, 0, ETO_OPAQUE, &rc, L"", 0, 0);
+            SetBkColor(hdcPaint, oldcr);
+        }
 
         BOOL bResetLastHeading = TRUE;
         BOOL bWasSpecifiedSectionValid = FALSE;
@@ -933,7 +945,7 @@ static BOOL GUI_Build(HDC hDC, HWND hwnd, POINT pt)
             if (strcmp(line, "Windows Registry Editor Version 5.00\r\n") && 
                 strcmp(line, "\r\n") && 
                 (currentSection == -1 || currentSection == _this->section || !strncmp(line, ";T ", 3) || !strncmp(line, ";f", 2) || AuditFile) &&
-                !((!IsThemeActive() || IsHighContrast()) && !strncmp(line, ";M ", 3))
+                !((!IsThemeActive() || IsHighContrast() || !IsWindows11()) && !strncmp(line, ";M ", 3))
                 )
             {
 #ifndef USE_PRIVATE_INTERFACES
@@ -1109,6 +1121,14 @@ static BOOL GUI_Build(HDC hDC, HWND hwnd, POINT pt)
                                 ""
 #endif
                                 );
+                        }
+
+                        p = strstr(line, "%OSVERSIONSTRING%");
+                        if (p)
+                        {
+                            RTL_OSVERSIONINFOW rovi;
+                            DWORD32 ubr = VnGetOSVersionAndUBR(&rovi);
+                            sprintf_s(p, MAX_PATH, "%d.%d.%d.%d.", rovi.dwMajorVersion, rovi.dwMinorVersion, rovi.dwBuildNumber, ubr);
                         }
                     }
                     ZeroMemory(text, (MAX_LINE_LENGTH + 3) * sizeof(wchar_t));
@@ -2946,7 +2966,7 @@ static BOOL GUI_Build(HDC hDC, HWND hwnd, POINT pt)
         printf("%d %d - %d %d\n", rcWin.right - rcWin.left, rcWin.bottom - rcWin.top, dwMaxWidth, dwMaxHeight);
 
         dwMaxWidth += dwInitialLeftPad + _this->padding.left + _this->padding.right;
-        if (!IsThemeActive() || IsHighContrast())
+        if (!IsThemeActive() || IsHighContrast() || !IsWindows11())
         {
             dwMaxHeight += GUI_LINE_HEIGHT * dy + 20 * dy;
         }
@@ -2969,68 +2989,75 @@ static BOOL GUI_Build(HDC hDC, HWND hwnd, POINT pt)
             SWP_NOZORDER | SWP_NOACTIVATE | (_this->bCalcExtent == 2 ? SWP_NOMOVE : 0)
         );
 
-        DWORD dwReadSection = 0;
+        if (_this->bCalcExtent != 2)
+        {
+            DWORD dwReadSection = 0;
 
-        HKEY hKey = NULL;
-        DWORD dwSize = sizeof(DWORD);
-        RegCreateKeyExW(
-            HKEY_CURRENT_USER,
-            TEXT(REGPATH),
-            0,
-            NULL,
-            REG_OPTION_NON_VOLATILE,
-            KEY_READ | KEY_WOW64_64KEY | KEY_WRITE,
-            NULL,
-            &hKey,
-            NULL
-        );
-        if (hKey == NULL || hKey == INVALID_HANDLE_VALUE)
-        {
-            hKey = NULL;
-        }
-        if (hKey)
-        {
-            dwReadSection = 0;
-            dwSize = sizeof(DWORD);
-            RegQueryValueExW(
-                hKey,
-                TEXT("LastSectionInProperties"),
+            HKEY hKey = NULL;
+            DWORD dwSize = sizeof(DWORD);
+            RegCreateKeyExW(
+                HKEY_CURRENT_USER,
+                TEXT(REGPATH),
                 0,
                 NULL,
-                &dwReadSection,
-                &dwSize
+                REG_OPTION_NON_VOLATILE,
+                KEY_READ | KEY_WOW64_64KEY | KEY_WRITE,
+                NULL,
+                &hKey,
+                NULL
             );
-            if (dwReadSection)
+            if (hKey == NULL || hKey == INVALID_HANDLE_VALUE)
             {
-                _this->section = dwReadSection - 1;
+                hKey = NULL;
             }
-            dwReadSection = 0;
-            dwSize = sizeof(DWORD);
-            RegQueryValueExW(
-                hKey,
-                TEXT("OpenPropertiesAtNextStart"),
-                0,
-                NULL,
-                &dwReadSection,
-                &dwSize
-            );
-            if (dwReadSection)
+            if (hKey)
             {
-                _this->section = dwReadSection - 1;
                 dwReadSection = 0;
-                RegSetValueExW(
+                dwSize = sizeof(DWORD);
+                RegQueryValueExW(
+                    hKey,
+                    TEXT("LastSectionInProperties"),
+                    0,
+                    NULL,
+                    &dwReadSection,
+                    &dwSize
+                );
+                if (dwReadSection)
+                {
+                    _this->section = dwReadSection - 1;
+                }
+                dwReadSection = 0;
+                dwSize = sizeof(DWORD);
+                RegQueryValueExW(
                     hKey,
                     TEXT("OpenPropertiesAtNextStart"),
                     0,
-                    REG_DWORD,
+                    NULL,
                     &dwReadSection,
-                    sizeof(DWORD)
+                    &dwSize
                 );
+                if (dwReadSection)
+                {
+                    _this->section = dwReadSection - 1;
+                    dwReadSection = 0;
+                    RegSetValueExW(
+                        hKey,
+                        TEXT("OpenPropertiesAtNextStart"),
+                        0,
+                        REG_DWORD,
+                        &dwReadSection,
+                        sizeof(DWORD)
+                    );
+                }
+                RegCloseKey(hKey);
             }
-            RegCloseKey(hKey);
         }
-
-        _this->bCalcExtent = FALSE;
+        if (_this->bCalcExtent == 2)
+        {
+            _this->section = _this->last_section;
+        }
+        
+        _this->bCalcExtent = 0;
         InvalidateRect(hwnd, NULL, FALSE);
     }
 
@@ -3071,7 +3098,7 @@ static LRESULT CALLBACK GUI_WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
         _this->dpi.x = dpiX;
         _this->dpi.y = dpiY;
         SetRect(&_this->border_thickness, 2, 2, 2, 2);
-        if (IsThemeActive())
+        if (IsThemeActive() && IsWindows11())
         {
             BOOL bIsCompositionEnabled = TRUE;
             DwmIsCompositionEnabled(&bIsCompositionEnabled);
@@ -3096,16 +3123,16 @@ static LRESULT CALLBACK GUI_WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
             }
         }
         SetWindowPos(
-            hWnd, 
-            hWnd, 
+            hWnd,
+            hWnd,
             mi.rcWork.left + ((mi.rcWork.right - mi.rcWork.left) / 2 - (_this->size.cx * dx) / 2),
             mi.rcWork.top + ((mi.rcWork.bottom - mi.rcWork.top) / 2 - (_this->size.cy * dy) / 2),
-            _this->size.cx * dxp, 
+            _this->size.cx * dxp,
             _this->size.cy * dyp,
             SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED
         );
         SetTimer(hWnd, GUI_TIMER_READ_HELP, GUI_TIMER_READ_HELP_TIMEOUT, NULL);
-        if (IsThemeActive() && !IsHighContrast())
+        if (IsThemeActive() && !IsHighContrast() && IsWindows11())
         {
             RECT rcTitle;
             DwmGetWindowAttribute(hWnd, DWMWA_CAPTION_BUTTON_BOUNDS, &rcTitle, sizeof(RECT));
@@ -3119,9 +3146,16 @@ static LRESULT CALLBACK GUI_WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
         {
             AllowDarkModeForWindow(hWnd, g_darkModeEnabled);
             BOOL value = g_darkModeEnabled;
-            DwmSetWindowAttribute(hWnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &value, sizeof(BOOL));
+            RTL_OSVERSIONINFOW rovi;
+            DWORD32 ubr = VnGetOSVersionAndUBR(&rovi);
+            int s = 0;
+            if (rovi.dwBuildNumber < 18985)
+            {
+                s = -1;
+            }
+            DwmSetWindowAttribute(hWnd, DWMWA_USE_IMMERSIVE_DARK_MODE + s, &value, sizeof(BOOL));
         }
-        if (!IsThemeActive() || IsHighContrast())
+        if (!IsThemeActive() || IsHighContrast() || !IsWindows11())
         {
             int extendedStyle = GetWindowLong(hWnd, GWL_EXSTYLE);
             SetWindowLong(hWnd, GWL_EXSTYLE, extendedStyle | WS_EX_DLGMODALFRAME);
@@ -3145,7 +3179,7 @@ static LRESULT CALLBACK GUI_WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
     {
         if (IsColorSchemeChangeMessage(lParam))
         {
-            if (IsThemeActive())
+            if (IsThemeActive() && IsWindows11())
             {
                 BOOL bIsCompositionEnabled = TRUE;
                 DwmIsCompositionEnabled(&bIsCompositionEnabled);
@@ -3169,12 +3203,11 @@ static LRESULT CALLBACK GUI_WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
                     DwmExtendFrameIntoClientArea(hWnd, &marGlassInset);
                 }
             }
-            _this->bCalcExtent = 2;
             BOOL bIsCompositionEnabled = TRUE;
             DwmIsCompositionEnabled(&bIsCompositionEnabled);
             if (bIsCompositionEnabled)
             {
-                BOOL value = (IsThemeActive() && !IsHighContrast()) ? 1 : 0;
+                BOOL value = (IsThemeActive() && !IsHighContrast() && IsWindows11()) ? 1 : 0;
                 DwmSetWindowAttribute(hWnd, DWMWA_MICA_EFFFECT, &value, sizeof(BOOL));
             }
             if (IsThemeActive() && ShouldAppsUseDarkMode && !IsHighContrast())
@@ -3186,12 +3219,25 @@ static LRESULT CALLBACK GUI_WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
                     g_darkModeEnabled = bDarkModeEnabled;
                     AllowDarkModeForWindow(hWnd, g_darkModeEnabled);
                     BOOL value = g_darkModeEnabled;
-                    DwmSetWindowAttribute(hWnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &value, sizeof(BOOL));
+                    RTL_OSVERSIONINFOW rovi;
+                    DWORD32 ubr = VnGetOSVersionAndUBR(&rovi);
+                    int s = 0;
+                    if (rovi.dwBuildNumber < 18985)
+                    {
+                        s = -1;
+                    }
+                    DwmSetWindowAttribute(hWnd, DWMWA_USE_IMMERSIVE_DARK_MODE + s, &value, sizeof(BOOL));
+                    _this->bCalcExtent = 2;
+                    _this->last_section = _this->section;
+                    _this->section = 0;
                     InvalidateRect(hWnd, NULL, FALSE);
                 }
             }
             else
             {
+                _this->bCalcExtent = 2;
+                _this->last_section = _this->section;
+                _this->section = 0;
                 InvalidateRect(hWnd, NULL, FALSE);
             }
         }
@@ -3288,6 +3334,11 @@ static LRESULT CALLBACK GUI_WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
             SetTimer(hWnd, GUI_TIMER_READ_HELP, 200, NULL);
             return 0;
         }
+        else if (wParam == VK_F5)
+        {
+            InvalidateRect(hWnd, NULL, FALSE);
+            return 0;
+        }
         else if (wParam == 'Z')
         {
             return 0;
@@ -3297,7 +3348,7 @@ static LRESULT CALLBACK GUI_WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
             return 0;
         }
     }
-    else if (uMsg == WM_NCMOUSELEAVE && IsThemeActive() && !IsHighContrast())
+    else if (uMsg == WM_NCMOUSELEAVE && IsThemeActive() && !IsHighContrast() && IsWindows11())
     {
         LRESULT lRes = 0;
         if (DwmDefWindowProc(hWnd, uMsg, wParam, lParam, &lRes))
@@ -3305,7 +3356,7 @@ static LRESULT CALLBACK GUI_WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
             return lRes;
         }
     }
-    else if (uMsg == WM_NCRBUTTONUP && IsThemeActive() && !IsHighContrast())
+    else if (uMsg == WM_NCRBUTTONUP && IsThemeActive() && !IsHighContrast() && IsWindows11())
     {
         HMENU pSysMenu = GetSystemMenu(hWnd, FALSE);
         if (pSysMenu != NULL)
@@ -3323,7 +3374,7 @@ static LRESULT CALLBACK GUI_WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
         }
         return 0;
     }
-    else if ((uMsg == WM_LBUTTONUP || uMsg == WM_RBUTTONUP) && IsThemeActive() && !IsHighContrast())
+    else if ((uMsg == WM_LBUTTONUP || uMsg == WM_RBUTTONUP) && IsThemeActive() && !IsHighContrast() && IsWindows11())
     {
         POINT pt;
         pt.x = GET_X_LPARAM(lParam);
@@ -3379,7 +3430,7 @@ static LRESULT CALLBACK GUI_WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
             return 0;
         }
     }
-    else if (uMsg == WM_NCHITTEST && IsThemeActive() && !IsHighContrast())
+    else if (uMsg == WM_NCHITTEST && IsThemeActive() && !IsHighContrast() && IsWindows11())
     {
         LRESULT lRes = 0;
         if (DwmDefWindowProc(hWnd, uMsg, wParam, lParam, &lRes))
@@ -3406,7 +3457,7 @@ static LRESULT CALLBACK GUI_WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
             return HTCAPTION;
         }
     }
-    else if (uMsg == WM_NCCALCSIZE && wParam == TRUE && IsThemeActive() && !IsHighContrast())
+    else if (uMsg == WM_NCCALCSIZE && wParam == TRUE && IsThemeActive() && !IsHighContrast() && IsWindows11())
     {
         NCCALCSIZE_PARAMS* sz = (NCCALCSIZE_PARAMS*)(lParam);
         sz->rgrc[0].left += _this->border_thickness.left;
@@ -3476,6 +3527,17 @@ static LRESULT CALLBACK GUI_WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
         _this->bShouldAnnounceSelected = TRUE;
         InvalidateRect(hWnd, NULL, FALSE);
         KillTimer(hWnd, GUI_TIMER_READ_REPEAT_SELECTION);
+    }
+    else if (uMsg == WM_USER + 1)
+    {
+        SetTimer(hWnd, GUI_TIMER_REFRESH_FOR_PEOPLEBAND, GUI_TIMER_REFRESH_FOR_PEOPLEBAND_TIMEOUT, NULL);
+        return 0;
+    }
+    else if (uMsg == WM_TIMER && wParam == GUI_TIMER_REFRESH_FOR_PEOPLEBAND)
+    {
+        InvalidateRect(hWnd, NULL, FALSE);
+        KillTimer(hWnd, GUI_TIMER_REFRESH_FOR_PEOPLEBAND);
+        return 0;
     }
     return DefWindowProc(hWnd, uMsg, wParam, lParam);
 }
@@ -3739,7 +3801,7 @@ __declspec(dllexport) int ZZGUI(HWND hWnd, HINSTANCE hInstance, LPSTR lpszCmdLin
         );
     }
 
-    if (IsThemeActive() && !IsHighContrast())
+    if (IsThemeActive() && !IsHighContrast() && IsWindows11())
     {
         if (bIsCompositionEnabled)
         {

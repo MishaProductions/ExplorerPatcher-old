@@ -1,4 +1,6 @@
 #include "utility.h"
+#include <Wininet.h>
+#pragma comment(lib, "Wininet.lib")
 
 #pragma region "Weird stuff"
 INT64 STDMETHODCALLTYPE nimpl4_1(INT64 a1, DWORD* a2)
@@ -1279,4 +1281,185 @@ LRESULT CALLBACK PleaseWait_HookProc(int code, WPARAM wParam, LPARAM lParam)
         PleaseWaitHook = NULL;
     }
     return result;
+}
+
+BOOL DownloadAndInstallWebView2Runtime()
+{
+    BOOL bOK = FALSE;
+    HINTERNET hInternet = NULL;
+    if (hInternet = InternetOpenA(
+        "ExplorerPatcher",
+        INTERNET_OPEN_TYPE_PRECONFIG,
+        NULL,
+        NULL,
+        0
+    ))
+    {
+        HINTERNET hConnect = InternetOpenUrlA(
+            hInternet,
+            "https://go.microsoft.com/fwlink/p/?LinkId=2124703",
+            NULL,
+            0,
+            INTERNET_FLAG_RAW_DATA |
+            INTERNET_FLAG_RELOAD |
+            INTERNET_FLAG_RESYNCHRONIZE |
+            INTERNET_FLAG_NO_COOKIES |
+            INTERNET_FLAG_NO_UI |
+            INTERNET_FLAG_NO_CACHE_WRITE |
+            INTERNET_FLAG_DONT_CACHE,
+            NULL
+        );
+        if (hConnect)
+        {
+            char* exe_buffer = NULL;
+            DWORD dwSize = 2 * 1024 * 1024;
+            DWORD dwRead = dwSize;
+            exe_buffer = calloc(dwSize, sizeof(char));
+            if (exe_buffer)
+            {
+                BOOL bRet = FALSE;
+                if (bRet = InternetReadFile(
+                    hConnect,
+                    exe_buffer,
+                    dwSize - 1,
+                    &dwRead
+                ))
+                {
+                    WCHAR wszPath[MAX_PATH];
+                    ZeroMemory(wszPath, MAX_PATH * sizeof(WCHAR));
+                    SHGetFolderPathW(NULL, SPECIAL_FOLDER_LEGACY, NULL, SHGFP_TYPE_CURRENT, wszPath);
+                    wcscat_s(wszPath, MAX_PATH, _T(APP_RELATIVE_PATH));
+                    BOOL bRet = CreateDirectoryW(wszPath, NULL);
+                    if (bRet || (!bRet && GetLastError() == ERROR_ALREADY_EXISTS))
+                    {
+                        wcscat_s(wszPath, MAX_PATH, L"\\MicrosoftEdgeWebview2Setup.exe");
+                        FILE* f = NULL;
+                        _wfopen_s(&f, wszPath, L"wb");
+                        if (f)
+                        {
+                            fwrite(exe_buffer, 1, dwRead, f);
+                            fclose(f);
+                            SHELLEXECUTEINFOW sei;
+                            ZeroMemory(&sei, sizeof(SHELLEXECUTEINFOW));
+                            sei.cbSize = sizeof(sei);
+                            sei.fMask = SEE_MASK_NOCLOSEPROCESS;
+                            sei.hwnd = NULL;
+                            sei.hInstApp = NULL;
+                            sei.lpVerb = NULL;
+                            sei.lpFile = wszPath;
+                            sei.lpParameters = L"";
+                            sei.hwnd = NULL;
+                            sei.nShow = SW_SHOWMINIMIZED;
+                            if (ShellExecuteExW(&sei) && sei.hProcess)
+                            {
+                                WaitForSingleObject(sei.hProcess, INFINITE);
+                                CloseHandle(sei.hProcess);
+                                Sleep(100);
+                                DeleteFileW(wszPath);
+                                bOK = TRUE;
+                            }
+                        }
+                    }
+                }
+                free(exe_buffer);
+            }
+            InternetCloseHandle(hConnect);
+        }
+        InternetCloseHandle(hInternet);
+    }
+    return bOK;
+}
+
+BOOL DownloadFile(LPCWSTR wszURL, DWORD dwSize, LPCWSTR wszPath)
+{
+    BOOL bOK = FALSE;
+    HINTERNET hInternet = NULL;
+    if (hInternet = InternetOpenW(
+        L"ExplorerPatcher",
+        INTERNET_OPEN_TYPE_PRECONFIG,
+        NULL,
+        NULL,
+        0
+    ))
+    {
+        HINTERNET hConnect = InternetOpenUrlW(
+            hInternet,
+            wszURL,
+            NULL,
+            0,
+            INTERNET_FLAG_RAW_DATA |
+            INTERNET_FLAG_RELOAD |
+            INTERNET_FLAG_RESYNCHRONIZE |
+            INTERNET_FLAG_NO_COOKIES |
+            INTERNET_FLAG_NO_UI |
+            INTERNET_FLAG_NO_CACHE_WRITE |
+            INTERNET_FLAG_DONT_CACHE,
+            NULL
+        );
+        if (hConnect)
+        {
+            char* exe_buffer = NULL;
+            DWORD dwRead = dwSize;
+            exe_buffer = calloc(dwSize, sizeof(char));
+            if (exe_buffer)
+            {
+                BOOL bRet = FALSE;
+                if (bRet = InternetReadFile(
+                    hConnect,
+                    exe_buffer,
+                    dwSize - 1,
+                    &dwRead
+                ))
+                {
+                    FILE* f = NULL;
+                    _wfopen_s(&f, wszPath, L"wb");
+                    if (f)
+                    {
+                        fwrite(exe_buffer, 1, dwRead, f);
+                        fclose(f);
+                    }
+                }
+                free(exe_buffer);
+            }
+            InternetCloseHandle(hConnect);
+        }
+        InternetCloseHandle(hInternet);
+    }
+    return bOK;
+}
+
+BOOL IsConnectedToInternet()
+{
+    BOOL connectedStatus = FALSE;
+    HRESULT hr = S_FALSE;
+
+    hr = CoInitialize(NULL);
+    if (SUCCEEDED(hr))
+    {
+        INetworkListManager* pNetworkListManager;
+        hr = CoCreateInstance(&CLSID_NetworkListManager, NULL, CLSCTX_ALL, &IID_NetworkListManager, (LPVOID*)&pNetworkListManager);
+        if (SUCCEEDED(hr))
+        {
+            NLM_CONNECTIVITY nlmConnectivity = NLM_CONNECTIVITY_DISCONNECTED;
+            VARIANT_BOOL isConnected = VARIANT_FALSE;
+            hr = pNetworkListManager->lpVtbl->get_IsConnectedToInternet(pNetworkListManager, &isConnected);
+            if (SUCCEEDED(hr))
+            {
+                if (isConnected == VARIANT_TRUE)
+                    connectedStatus = TRUE;
+                else
+                    connectedStatus = FALSE;
+            }
+            if (isConnected == VARIANT_FALSE && SUCCEEDED(pNetworkListManager->lpVtbl->GetConnectivity(pNetworkListManager, &nlmConnectivity)))
+            {
+                if (nlmConnectivity & (NLM_CONNECTIVITY_IPV4_LOCALNETWORK | NLM_CONNECTIVITY_IPV4_SUBNET | NLM_CONNECTIVITY_IPV6_LOCALNETWORK | NLM_CONNECTIVITY_IPV6_SUBNET))
+                {
+                    connectedStatus = 2;
+                }
+            }
+            pNetworkListManager->lpVtbl->Release(pNetworkListManager);
+        }
+        CoUninitialize();
+    }
+    return connectedStatus;
 }

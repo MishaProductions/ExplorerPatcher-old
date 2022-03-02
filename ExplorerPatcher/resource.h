@@ -24,6 +24,7 @@
 #define IDB_START_32_BOTH               117
 #define VER_MINOR                       493
 #define VER_MAJOR                       22000
+#define IDR_REGISTRY2                   114
 
 // Next default values for new objects
 // 

@@ -90,6 +90,7 @@ END
 //
 
 IDR_REGISTRY1           RCDATA                  "settings.reg"
+IDR_REGISTRY2           RCDATA                  "settings10.reg"
 
 IDB_SEARCH_32_DARK      RCDATA                  "icons\\search_dark_32.png"
 

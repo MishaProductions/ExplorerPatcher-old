@@ -19,6 +19,8 @@
 #include "queryversion.h"
 #pragma comment(lib, "Psapi.lib")
 #include <activscp.h>
+#include <netlistmgr.h>
+#include <valinet/utility/osversion.h>
 
 #include "def.h"
 
@@ -58,6 +60,12 @@ DEFINE_GUID(CLSID_VBScript,
     0x5B07, 0x11CF, 0xA4, 0xB0, 
     0x00, 0xAA, 0x00, 0x4A, 0x55, 0xE8
 );
+
+DEFINE_GUID(CLSID_NetworkListManager,
+    0xDCB00C01, 0x570F, 0x4A9B, 0x8D, 0x69, 0x19, 0x9F, 0xDB, 0xA5, 0x72, 0x3B);
+
+DEFINE_GUID(IID_NetworkListManager,
+    0xDCB00000, 0x570F, 0x4A9B, 0x8D, 0x69, 0x19, 0x9F, 0xDB, 0xA5, 0x72, 0x3B);
 
 typedef struct _StuckRectsData
 {
@@ -562,4 +570,20 @@ extern BOOL (*PleaseWaitCallbackFunc)(void* data);
 BOOL PleaseWait_UpdateTimeout(int timeout);
 VOID CALLBACK PleaseWait_TimerProc(HWND hWnd, UINT uMsg, UINT idEvent, DWORD dwTime);
 LRESULT CALLBACK PleaseWait_HookProc(int code, WPARAM wParam, LPARAM lParam);
+
+inline BOOL IsWindows11()
+{
+    RTL_OSVERSIONINFOW rovi;
+    if (VnGetOSVersion(&rovi) && rovi.dwBuildNumber >= 21996)
+    {
+        return TRUE;
+    }
+    return FALSE;
+}
+
+BOOL DownloadAndInstallWebView2Runtime();
+
+BOOL DownloadFile(LPCWSTR wszURL, DWORD dwSize, LPCWSTR wszPath);
+
+BOOL IsConnectedToInternet();
 #endif

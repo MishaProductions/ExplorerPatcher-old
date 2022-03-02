@@ -156,9 +156,10 @@ HRESULT STDMETHODCALLTYPE _epw_Weather_NavigateToError(EPWeather* _this)
     int ch = MulDiv(MulDiv(305, dpi, 96), epw_Weather_GetTextScaleFactor(_this), 100);
     RECT rc;
     GetWindowRect(_this->hWnd, &rc);
-    if (rc.bottom - rc.top != ch)
+    int w = MulDiv(MulDiv(EP_WEATHER_WIDTH, GetDpiForWindow(_this->hWnd), 96), epw_Weather_GetTextScaleFactor(_this), 100);
+    if ((rc.bottom - rc.top != ch) || (rc.right - rc.left != w))
     {
-        SetWindowPos(_this->hWnd, NULL, 0, 0, rc.right - rc.left, ch, SWP_NOMOVE | SWP_NOSENDCHANGING);
+        SetWindowPos(_this->hWnd, NULL, 0, 0, w, ch, SWP_NOMOVE | SWP_NOSENDCHANGING);
         HWND hNotifyWnd = InterlockedAdd64(&_this->hNotifyWnd, 0);
         if (hNotifyWnd)
         {
@@ -254,7 +255,8 @@ HRESULT STDMETHODCALLTYPE _ep_weather_ReboundBrowser(EPWeather* _this, LONG64 dw
 {
     UINT dpi = GetDpiForWindow(_this->hWnd);
     RECT bounds;
-    if (dwType)
+    DWORD dwDevMode = InterlockedAdd64(&_this->dwDevMode, 0);
+    if (dwType || dwDevMode)
     {
         GetClientRect(_this->hWnd, &bounds);
     }
@@ -308,16 +310,17 @@ HRESULT STDMETHODCALLTYPE ICoreWebView2_CreateCoreWebView2ControllerCompleted(IC
         pCoreWebView2Settings->lpVtbl->QueryInterface(pCoreWebView2Settings, &IID_ICoreWebView2Settings6, &pCoreWebView2Settings6);
         if (pCoreWebView2Settings6)
         {
-            pCoreWebView2Settings6->lpVtbl->put_AreDevToolsEnabled(pCoreWebView2Settings6, FALSE);
-            pCoreWebView2Settings6->lpVtbl->put_AreDefaultContextMenusEnabled(pCoreWebView2Settings6, FALSE);
+            DWORD dwDevMode = InterlockedAdd64(&_this->dwDevMode, 0);
+            pCoreWebView2Settings6->lpVtbl->put_AreDevToolsEnabled(pCoreWebView2Settings6, dwDevMode);
+            pCoreWebView2Settings6->lpVtbl->put_AreDefaultContextMenusEnabled(pCoreWebView2Settings6, dwDevMode);
             pCoreWebView2Settings6->lpVtbl->put_IsStatusBarEnabled(pCoreWebView2Settings6, FALSE);
             pCoreWebView2Settings6->lpVtbl->put_IsZoomControlEnabled(pCoreWebView2Settings6, FALSE);
             pCoreWebView2Settings6->lpVtbl->put_IsGeneralAutofillEnabled(pCoreWebView2Settings6, FALSE);
             pCoreWebView2Settings6->lpVtbl->put_IsPasswordAutosaveEnabled(pCoreWebView2Settings6, FALSE);
             pCoreWebView2Settings6->lpVtbl->put_IsPinchZoomEnabled(pCoreWebView2Settings6, FALSE);
             pCoreWebView2Settings6->lpVtbl->put_IsSwipeNavigationEnabled(pCoreWebView2Settings6, FALSE);
-            pCoreWebView2Settings6->lpVtbl->put_AreBrowserAcceleratorKeysEnabled(pCoreWebView2Settings6, FALSE);
-            pCoreWebView2Settings6->lpVtbl->put_AreDefaultScriptDialogsEnabled(pCoreWebView2Settings6, FALSE);
+            pCoreWebView2Settings6->lpVtbl->put_AreBrowserAcceleratorKeysEnabled(pCoreWebView2Settings6, dwDevMode);
+            pCoreWebView2Settings6->lpVtbl->put_AreDefaultScriptDialogsEnabled(pCoreWebView2Settings6, dwDevMode);
             pCoreWebView2Settings6->lpVtbl->Release(pCoreWebView2Settings6);
         }
         pCoreWebView2Settings->lpVtbl->Release(pCoreWebView2Settings);
@@ -510,9 +513,10 @@ HRESULT STDMETHODCALLTYPE ICoreWebView2_ExecuteScriptCompleted(ICoreWebView2Exec
                                             ch = MulDiv(MulDiv(ch, dpi, 96), epw_Weather_GetTextScaleFactor(_this), 100);
                                             RECT rc;
                                             GetWindowRect(_this->hWnd, &rc);
-                                            if (rc.bottom - rc.top != ch)
+                                            int w = MulDiv(MulDiv(EP_WEATHER_WIDTH, GetDpiForWindow(_this->hWnd), 96), epw_Weather_GetTextScaleFactor(_this), 100);
+                                            if ((rc.bottom - rc.top != ch) || (rc.right - rc.left != w))
                                             {
-                                                SetWindowPos(_this->hWnd, NULL, 0, 0, rc.right - rc.left, ch, SWP_NOMOVE | SWP_NOSENDCHANGING);
+                                                SetWindowPos(_this->hWnd, NULL, 0, 0, w, ch, SWP_NOMOVE | SWP_NOSENDCHANGING);
                                                 _ep_weather_ReboundBrowser(_this, FALSE);
                                                 HWND hNotifyWnd = InterlockedAdd64(&_this->hNotifyWnd, 0);
                                                 if (hNotifyWnd)
@@ -813,6 +817,37 @@ LRESULT CALLBACK epw_Weather_WindowProc(_In_ HWND hWnd, _In_ UINT uMsg, _In_ WPA
             return S_OK;
         }
     }
+    else if (uMsg == EP_WEATHER_WM_SETDEVMODE)
+    {
+        if (_this->pCoreWebView2)
+        {
+            ICoreWebView2Settings* pCoreWebView2Settings = NULL;
+            _this->pCoreWebView2->lpVtbl->get_Settings(_this->pCoreWebView2, &pCoreWebView2Settings);
+            if (pCoreWebView2Settings)
+            {
+                ICoreWebView2Settings6* pCoreWebView2Settings6 = NULL;
+                pCoreWebView2Settings->lpVtbl->QueryInterface(pCoreWebView2Settings, &IID_ICoreWebView2Settings6, &pCoreWebView2Settings6);
+                if (pCoreWebView2Settings6)
+                {
+                    pCoreWebView2Settings6->lpVtbl->put_AreDevToolsEnabled(pCoreWebView2Settings6, wParam);
+                    pCoreWebView2Settings6->lpVtbl->put_AreDefaultContextMenusEnabled(pCoreWebView2Settings6, wParam);
+                    pCoreWebView2Settings6->lpVtbl->put_AreBrowserAcceleratorKeysEnabled(pCoreWebView2Settings6, wParam);
+                    pCoreWebView2Settings6->lpVtbl->put_AreDefaultScriptDialogsEnabled(pCoreWebView2Settings6, wParam);
+                    pCoreWebView2Settings6->lpVtbl->Release(pCoreWebView2Settings6);
+                    SetLastError(0);
+                    LONG dwStyle = GetWindowLongW(_this->hWnd, GWL_STYLE);
+                    if (!GetLastError())
+                    {
+                        if (wParam) dwStyle |= WS_SIZEBOX;
+                        else dwStyle &= ~WS_SIZEBOX;
+                        SetWindowLong(_this->hWnd, GWL_STYLE, dwStyle);
+                    }
+                    PostMessageW(_this->hWnd, EP_WEATHER_WM_FETCH_DATA, 0, 0);
+                }
+                pCoreWebView2Settings->lpVtbl->Release(pCoreWebView2Settings);
+            }
+        }
+    }
     else if (uMsg == WM_CLOSE || (uMsg == WM_KEYUP && wParam == VK_ESCAPE) || (uMsg == WM_ACTIVATEAPP && wParam == FALSE && GetAncestor(GetForegroundWindow(), GA_ROOT) != _this->hWnd))
     {
         epw_Weather_Hide(_this);
@@ -822,8 +857,13 @@ LRESULT CALLBACK epw_Weather_WindowProc(_In_ HWND hWnd, _In_ UINT uMsg, _In_ WPA
     {
         if (IsWindowVisible(hWnd))
         {
+            LONG64 dwDevMode = InterlockedAdd64(&_this->dwDevMode, 0);
             WINDOWPOS* pwp = (WINDOWPOS*)lParam;
-            pwp->flags |= SWP_NOMOVE | SWP_NOSIZE;
+            pwp->flags |= (!dwDevMode ? (SWP_NOMOVE | SWP_NOSIZE) : 0);
+            if (dwDevMode)
+            {
+                _ep_weather_ReboundBrowser(_this, TRUE);
+            }
         }
         return 0;
     }
@@ -846,10 +886,24 @@ LRESULT CALLBACK epw_Weather_WindowProc(_In_ HWND hWnd, _In_ UINT uMsg, _In_ WPA
                 marGlassInset.cyBottomHeight = 0;
                 marGlassInset.cyTopHeight = 0;
             }
-            DwmExtendFrameIntoClientArea(_this->hWnd, &marGlassInset);
-            BOOL value = (IsThemeActive() && !IsHighContrast()) ? 1 : 0;
-            DwmSetWindowAttribute(hWnd, 1029, &value, sizeof(BOOL));
             LONG64 dwDarkMode = InterlockedAdd64(&_this->g_darkModeEnabled, 0);
+            if (IsWindows11())
+            {
+                DwmExtendFrameIntoClientArea(_this->hWnd, &marGlassInset);
+                BOOL value = (IsThemeActive() && !IsHighContrast()) ? 1 : 0;
+                DwmSetWindowAttribute(_this->hWnd, 1029, &value, sizeof(BOOL));
+            }
+            else
+            {
+                RTL_OSVERSIONINFOW rovi;
+                DWORD32 ubr = GetOSVersionAndUBR(&rovi);
+                int s = 0;
+                if (rovi.dwBuildNumber < 18985)
+                {
+                    s = -1;
+                }
+                DwmSetWindowAttribute(_this->hWnd, DWMWA_USE_IMMERSIVE_DARK_MODE + s, &dwDarkMode, sizeof(LONG64));
+            }
             if (!dwDarkMode)
             {
                 epw_Weather_SetDarkMode(_this, dwDarkMode, TRUE);
@@ -865,7 +919,22 @@ LRESULT CALLBACK epw_Weather_WindowProc(_In_ HWND hWnd, _In_ UINT uMsg, _In_ WPA
         SetWindowPos(_this->hWnd, NULL, rc->left, rc->top, w, rc->bottom - rc->top, 0);
         return 0;
     }
-
+    else if (uMsg == WM_PAINT && !IsWindows11())
+    {
+        PAINTSTRUCT ps;
+        HDC hdc = BeginPaint(hWnd, &ps);
+        if (ps.fErase)
+        {
+            LONG64 bEnabled, dwDarkMode;
+            dwDarkMode = InterlockedAdd64(&_this->g_darkModeEnabled, 0);
+            epw_Weather_IsDarkMode(_this, dwDarkMode, &bEnabled);
+            COLORREF oldcr = SetBkColor(hdc, bEnabled ? RGB(0, 0, 0) : RGB(255, 255, 255));
+            ExtTextOutW(hdc, 0, 0, ETO_OPAQUE, &ps.rcPaint, L"", 0, 0);
+            SetBkColor(hdc, oldcr);
+        }
+        EndPaint(hWnd, &ps);
+        return 0;
+    }
     /*BOOL bIsRunningWithoutVisualStyle = !IsThemeActive() || IsHighContrast();
     if (uMsg == WM_CREATE)
     {
@@ -939,7 +1008,8 @@ HRESULT STDMETHODCALLTYPE epw_Weather_IsDarkMode(EPWeather* _this, LONG64 dwDark
     DwmIsCompositionEnabled(&bIsCompositionEnabled);
     if (!dwDarkMode)
     {
-        *bEnabled = bIsCompositionEnabled && (ShouldSystemUseDarkMode ? ShouldSystemUseDarkMode() : FALSE) && !IsHighContrast();
+        RTL_OSVERSIONINFOW rovi;
+        *bEnabled = bIsCompositionEnabled && ((GetOSVersion(&rovi) && rovi.dwBuildNumber < 18985) ? TRUE : (ShouldSystemUseDarkMode ? ShouldSystemUseDarkMode() : FALSE)) && !IsHighContrast();
     }
     else
     {
@@ -959,7 +1029,14 @@ HRESULT STDMETHODCALLTYPE epw_Weather_SetDarkMode(EPWeather* _this, LONG64 dwDar
         if (_this->hWnd)
         {
             AllowDarkModeForWindow(_this->hWnd, bEnabled);
-            DwmSetWindowAttribute(_this->hWnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &bEnabled, sizeof(BOOL));
+            RTL_OSVERSIONINFOW rovi;
+            DWORD32 ubr = GetOSVersionAndUBR(&rovi);
+            int s = 0;
+            if (rovi.dwBuildNumber < 18985)
+            {
+                s = -1;
+            }
+            DwmSetWindowAttribute(_this->hWnd, DWMWA_USE_IMMERSIVE_DARK_MODE + s, &bEnabled, sizeof(BOOL));
             //InvalidateRect(_this->hWnd, NULL, FALSE);
             PostMessageW(_this->hWnd, EP_WEATHER_WM_SET_BROWSER_THEME, bEnabled, bRefresh);
         }
@@ -982,6 +1059,16 @@ HRESULT STDMETHODCALLTYPE epw_Weather_SetWindowCornerPreference(EPWeather* _this
     if (_this->hWnd)
     {
         DwmSetWindowAttribute(_this->hWnd, DWMWA_WINDOW_CORNER_PREFERENCE, &preference, sizeof(preference));
+    }
+    return S_OK;
+}
+
+HRESULT STDMETHODCALLTYPE epw_Weather_SetDevMode(EPWeather* _this, LONG64 dwDevMode, LONG64 bRefresh)
+{
+    InterlockedExchange64(&_this->dwDevMode, dwDevMode);
+    if (bRefresh)
+    {
+        PostMessageW(_this->hWnd, EP_WEATHER_WM_SETDEVMODE, dwDevMode, 0);
     }
     return S_OK;
 }
@@ -1016,7 +1103,7 @@ DWORD WINAPI epw_Weather_MainThread(EPWeather* _this)
     wc.style = CS_DBLCLKS;
     wc.lpfnWndProc = epw_Weather_WindowProc;
     wc.hInstance = epw_hModule;
-    wc.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
+    wc.hbrBackground = IsWindows11() ? (HBRUSH)GetStockObject(BLACK_BRUSH) : NULL;
     wc.lpszClassName = _T(EPW_WEATHER_CLASSNAME);
     wc.hCursor = LoadCursorW(NULL, IDC_ARROW);
     if (!RegisterClassW(&wc))
@@ -1025,7 +1112,8 @@ DWORD WINAPI epw_Weather_MainThread(EPWeather* _this)
         //goto cleanup;
     }
 
-    _this->hWnd = CreateWindowExW(0, _T(EPW_WEATHER_CLASSNAME), L"", WS_OVERLAPPED | WS_CAPTION, _this->rc.left, _this->rc.top, _this->rc.right - _this->rc.left, _this->rc.bottom - _this->rc.top, NULL, NULL, epw_hModule, _this); // 1030, 630
+    DWORD dwDevMode = InterlockedAdd64(&_this->dwDevMode, 0);
+    _this->hWnd = CreateWindowExW(0, _T(EPW_WEATHER_CLASSNAME), L"", WS_OVERLAPPED | WS_CAPTION | (dwDevMode ? WS_SIZEBOX : 0), _this->rc.left, _this->rc.top, _this->rc.right - _this->rc.left, _this->rc.bottom - _this->rc.top, NULL, NULL, epw_hModule, _this); // 1030, 630
     if (!_this->hWnd)
     {
         _this->hrLastError = HRESULT_FROM_WIN32(GetLastError());
@@ -1051,14 +1139,28 @@ DWORD WINAPI epw_Weather_MainThread(EPWeather* _this)
         goto cleanup;
     }
 
-    if (!IsHighContrast())
-    {
-        MARGINS marGlassInset = { -1, -1, -1, -1 }; // -1 means the whole window
-        DwmExtendFrameIntoClientArea(_this->hWnd, &marGlassInset);
-        BOOL value = 1;
-        DwmSetWindowAttribute(_this->hWnd, 1029, &value, sizeof(BOOL));
-    }
     LONG64 dwDarkMode = InterlockedAdd64(&_this->g_darkModeEnabled, 0);
+    if (IsWindows11())
+    {
+        if (!IsHighContrast())
+        {
+            MARGINS marGlassInset = { -1, -1, -1, -1 }; // -1 means the whole window
+            DwmExtendFrameIntoClientArea(_this->hWnd, &marGlassInset);
+            BOOL value = 1;
+            DwmSetWindowAttribute(_this->hWnd, 1029, &value, sizeof(BOOL));
+        }
+    }
+    else
+    {
+        RTL_OSVERSIONINFOW rovi;
+        DWORD32 ubr = GetOSVersionAndUBR(&rovi);
+        int s = 0;
+        if (rovi.dwBuildNumber < 18985)
+        {
+            s = -1;
+        }
+        DwmSetWindowAttribute(_this->hWnd, DWMWA_USE_IMMERSIVE_DARK_MODE + s, &dwDarkMode, sizeof(LONG64));
+    }
     epw_Weather_SetDarkMode(_this, dwDarkMode, FALSE);
 
     InterlockedExchange64(&_this->bBrowserBusy, TRUE);

@@ -6,12 +6,16 @@ This document includes the same release notes as in the [Releases](https://githu
 
 Tested on OS build 22000.493.
 
+Please make sure you are connected to the Internet while installing, the application might need to perform one-time downloads for several resources in order to enable full functionality.
+
 #### New features
 
 * Built-in support for OS build 22000.493, OS build 22000.527 (Preview).
+* Support for Windows 10 (.16, .17). Read more about this [here](https://github.com/valinet/ExplorerPatcher/discussions/898).
+* Support for the Windows 10 Start menu. Read more about this [here](https://github.com/valinet/ExplorerPatcher/discussions/920).
 * Implemented Weather widget for the classic taskbar, similar to what is available in the more recent updates to Windows 10. Read more about it [here](https://github.com/valinet/ExplorerPatcher/wiki/Weather).
 * Implemented 2 features that help in replacing the functionality of the quick launch toolbar with pinned taskbar items. Read more about it [here](https://github.com/valinet/ExplorerPatcher/discussions/819) (.7).
-* Implemented option to have Start open on a specific monitor (#821) (.8)
+* Implemented option to have the Start menu open on a specific monitor (#821) (.8)
 
 #### Feature enhancements
 
@@ -24,6 +28,8 @@ Tested on OS build 22000.493.
 * Option to clear weather widget local data (.10, .11)
 * Installer sets a Start menu shortcut for the "Properties" window (.11)
 * Support for high contrast themes in the "Properties" window and in the weather widget (#885) (.15)
+* Enabling the weather widget will automatically download and install the Microsoft WebView2 Runtime on computers where it is not installed (.16)
+* Option to enable dev tools for weather widget debugging (#934) (.19, .20)
 
 #### Fixes
 
@@ -41,6 +47,10 @@ Tested on OS build 22000.493.
 * The weather widget positions and sizes itself with respect to the text size accessibility setting as well ([#734](https://github.com/valinet/ExplorerPatcher/discussions/734#discussioncomment-2190218)) (.14)
 * Fixed a bug that could lead to a crash when `explorer.exe` starts (#879) (.15)
 * Fixed a bug that could prevent the weather widget from launching under certain conditions (.15)
+* Fixed a bug in the Weather widget that could display an erroneous Google search pop-up (thanks @plofhaan) ([#734](https://github.com/valinet/ExplorerPatcher/discussions/734#discussioncomment-2216475)) (.17)
+* Fixed a bug that resulted in an access violation on log off when EP runs alongside 7+TT (#894) (.18)
+* Fixed a bug that prevented the "Skin menus" setting from working in the `Win`+`X` menu on Windows 10 (.19)
+* Fixed a bug that would display an information banner that obscured the weather widget in some occasions when displaying the widget in German (#934) (thanks @frederic2de) (.20)
 
 ## 22000.469.41
 
