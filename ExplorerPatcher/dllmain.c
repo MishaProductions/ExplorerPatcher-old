@@ -8202,6 +8202,7 @@ DWORD InjectBasicFunctions(BOOL bIsExplorer, BOOL bInstall)
     }
     if (!VnPatchDelayIAT(hDwmApi, "dwmapi.dll", "DwmExtendFrameIntoClientArea", DWMExtendFrameHook)) {
         printf("DWMExtendFrameHook failed\n");
+    }
     if (bInstall)
     {
         DWORD dwSize = sizeof(DWORD);
