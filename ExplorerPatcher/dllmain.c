@@ -3191,14 +3191,34 @@ BOOL WINAPI DisableImmersiveMenus_SystemParametersInfoW(
 
 #pragma region "Explorer: Hide search bar, Mica effect, hide navigation bar"
 
+typedef void (WINAPI* RtlGetVersion_FUNC) (OSVERSIONINFOEXW*);
 bool CheckIfBuild22523OrHigher()
 {
-    struct _OSVERSIONINFOW VersionInformation; // [rsp+20h] [rbp-128h] BYREF
+    RtlGetVersion_FUNC func;
+    HMODULE hMod = LoadLibrary(TEXT("ntdll.dll"));
+    OSVERSIONINFOEX os;
+#ifdef UNICODE
+    OSVERSIONINFOEXW* osw = &os;
+#else
+    OSVERSIONINFOEXW o;
+    OSVERSIONINFOEXW* osw = &o;
+#endif
+    if (hMod) {
+        func = (RtlGetVersion_FUNC)GetProcAddress(hMod, "RtlGetVersion");
+        if (func == 0) {
+            FreeLibrary(hMod);
+            return FALSE;
+        }
 
-    VersionInformation.dwOSVersionInfoSize = 276;
-    memset(&VersionInformation.dwMajorVersion, 0, 0x110ui64);
-    GetVersionExW(&VersionInformation);
-    return VersionInformation.dwBuildNumber > 0x57DC;
+        ZeroMemory(osw, sizeof(*osw));
+        osw->dwOSVersionInfoSize = sizeof(*osw);
+        func(osw);
+
+        return osw->dwBuildNumber > 22492;
+    }
+    else {
+        return FALSE;
+    }
 }
 
 static HWND(__stdcall *explorerframe_SHCreateWorkerWindowFunc)(
